@@ -3,6 +3,7 @@
 from functools import partial
 from distutils.version import StrictVersion
 import os
+os.environ["OMNETPP_ROOT"] = "/home/wld/.libs/omnetpp-5.6.2/"
 import re
 import subprocess
 import sys

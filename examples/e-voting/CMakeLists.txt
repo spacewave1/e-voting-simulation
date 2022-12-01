@@ -1,32 +1,22 @@
 # This is a basic example of an OMNeT++ project using CMake.
 # Compared to more advanced projects, this example depends only on OMNeT++ itself.
 
-project(BasicOppProject)
+project(VotingSimulationProject)
 cmake_minimum_required(VERSION 3.13)
 
-# Tell CMake where it can the omnetpp-cmake sources
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../..)
-
-# Find an OMNeT++ installation on your system.
-# The found libraries and headers are available as OmnetPP::* targets.
-#find_package(OmnetPP REQUIRED)
-# Alternatively, you can also explicitly request a particular OMNeT++ version:
-# find_package(OmnetPP 5.6 REQUIRED)
+include_directories(../../../core/src)
 
 # OMNeT++ projects are usually built as shared objects (dynamic libraries),
 # which are loaded and executed by opp_run or opp_run_debug later on (see add_opp_run below).
-add_library(basic_example SHARED src/TicToc.cc)
+add_library(VotingSimulation SHARED src/VotingApp.cc)
 
 # Define where to look for *.ned files when using your simulation model
-set_target_properties(basic_example PROPERTIES NED_FOLDERS src)
+set_target_properties(VotingSimulation PROPERTIES NED_FOLDERS src)
 
 # Our library depends on the OMNeT++ libraries
-target_link_libraries(basic_example PUBLIC OmnetPP::sim)
+target_link_libraries(VotingSimulation PUBLIC OmnetPP::sim INET)
 
-# Generate source code from an OMNeT++ message:
-# Build the generated sources along with your TARGET.
-include(GenerateOppMessage)
-generate_opp_message(src/Tone.msg TARGET basic_example)
+#generate_opp_message(src/Tone.msg TARGET PcapRecorder)
 
 # Add targets to run and debug your project:
 # - run_basic runs your model with opp_run (always available)
@@ -40,7 +30,9 @@ generate_opp_message(src/Tone.msg TARGET basic_example)
 #
 # add_opp_run knows where to find your library and also appends the NED paths automatically.
 include(AddOppRun)
-add_opp_run(basic DEPENDENCY basic_example WORKING_DIRECTORY run)
+#add_opp_run(basic DEPENDENCY basic_example WORKING_DIRECTORY run)
+
+add_opp_run(voting DEPENDENCY INET DEPENDENCY VotingSimulation WORKING_DIRECTORY run)
 
 # Bonus: test cases for your simulation model
 #
@@ -49,4 +41,4 @@ add_opp_run(basic DEPENDENCY basic_example WORKING_DIRECTORY run)
 # add_opp_run(basic ...).
 # You can run the tests via `make test` or invoking `ctest` in your build directory.
 enable_testing()
-add_opp_test(basic CONFIG Reverse SIMTIME_LIMIT 20s SUFFIX reversed)
+add_opp_test(voting CONFIG Reverse SIMTIME_LIMIT 20s SUFFIX reversed)
