@@ -8,13 +8,22 @@ include_directories(../../../core/src)
 
 # OMNeT++ projects are usually built as shared objects (dynamic libraries),
 # which are loaded and executed by opp_run or opp_run_debug later on (see add_opp_run below).
-add_library(VotingSimulation SHARED src/VotingApp.cc)
+add_library(VotingSimulation SHARED
+        src/VotingApp.h
+        src/VotingApp.cc
+        src/VotingApp.ned
+        src/Voting.ned
+        src/inetSocketAdapter.cpp
+        src/inetSocketAdapter.h
+        src/VotingAppForward.ned
+        src/VotingAppForward.cc
+        src/VotingAppForward.h)
 
 # Define where to look for *.ned files when using your simulation model
 set_target_properties(VotingSimulation PROPERTIES NED_FOLDERS src)
 
 # Our library depends on the OMNeT++ libraries
-target_link_libraries(VotingSimulation PUBLIC OmnetPP::sim INET)
+target_link_libraries(VotingSimulation PUBLIC OmnetPP::sim INET vote_core)
 
 #generate_opp_message(src/Tone.msg TARGET PcapRecorder)
 
