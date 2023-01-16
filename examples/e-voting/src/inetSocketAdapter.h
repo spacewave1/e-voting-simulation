@@ -7,6 +7,7 @@
 
 #include "inet/transportlayer/contract/tcp/TcpSocket.h"
 #include "network/abstractSocket.h"
+#include "VotingAppConnectionRequestReply.h"
 
 class inetSocketAdapter : public abstractSocket {
 public:
@@ -23,9 +24,12 @@ public:
     void setSocket(inet::TcpSocket& socket);
     void recvAlt() override;
 
+    //void socketDataArrived(inet::TcpSocket *socket, inet::Packet *packet, bool urgent) override;
+
 private:
     inet::Packet sendOutPacket;
     inet::TcpSocket socket;
+    voting::VotingAppConnectionRequestReply * requestReplyConnection;
 };
 
 

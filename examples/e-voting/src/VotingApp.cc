@@ -11,28 +11,55 @@
 
 #define MSGKIND_CONNECT    1
 #define MSGKIND_SEND       2
-#define MSGKIND_CLOSE      3
+#define MSGKIND_LISTEN     3
+#define MSGKIND_LISTEN_END 4
+#define MSGKIND_CLOSE      5
 
 
 namespace voting {
     Define_Module(VotingApp);
 
     void VotingApp::handleTimer(inet::cMessage *msg) {
-        EV_DEBUG << "timer" << std::endl;
-        if(!isReceiving){
-            if(msg->getKind() == MSGKIND_CONNECT) {
-                const inet::L3Address &connectAddress = inet::L3Address(par("connectAddress"));
-                int connectPort = 5555;
-                connect();
-            }
-            else if(msg->getKind() == MSGKIND_SEND) {
-                EV_DEBUG << "send packet" << std::endl;
-                sendPacket(createDataPacket(10));
-            }
-        } else {
-            if(msg->isSelfMessage()) {
-                EV_DEBUG << "listen is self message" << std::endl;
-            }
+        if(msg->getKind() == MSGKIND_LISTEN) {
+            EV_DEBUG << "now listen" << std::endl;
+            isReceiving = true;
+            socket.renewSocket();
+            setupSocket();
+            socket_adapter.setSocket(socket);
+            connection_service.changeToListenState(socket_adapter);
+            EV_DEBUG << "before connection service" << std::endl;
+        }
+        // TODO: Destroy connection objects, once the socket is closed
+        if(msg->getKind() == MSGKIND_LISTEN_END) {
+            isReceiving = false;
+            listenStop();
+            std::for_each(connectionSet.begin(), connectionSet.end(), [](VotingAppConnectionRequestReply * rrp){
+                rrp->deleteModule();
+            });
+        }
+        if(msg->getKind() == MSGKIND_CONNECT) {
+            socket.renewSocket();
+            // parameters
+            setupSocket();
+            connect();
+        }
+        if(msg->getKind() == MSGKIND_SEND) {
+            EV_DEBUG << "send packet" << std::endl;
+            sendPacket(createDataPacket(10));
+
+            std::string connectAddress{par("connectAddress").stringValue()};
+            std::string localAddress{par("localAddress").stringValue()};
+
+            socket_adapter.setSocket(socket);
+            connection_service.sendConnectionRequest(socket_adapter, connectAddress);
+            connection_service.receiveConnectionReply(socket_adapter, connectAddress, nodes, connection_map, localAddress);
+        }
+        if(msg->getKind() == MSGKIND_CLOSE) {
+            EV_DEBUG << "close socket" << std::endl;
+            //std::for_each(connectionSet.begin(), connectionSet.end(),[](VotingAppConnectionRequestReply* rr){
+                //rr->cancelAndDelete();
+            //});
+            close();
         }
     }
 
@@ -68,32 +95,42 @@ namespace voting {
         EV_DEBUG << "export" << this->getFullPath().substr(0,19) << std::endl;
         writeStateToFile("peers_at_start_" + this->getFullPath().substr(0,19) + ".json");
 
-        if(isReceiving) {
-            const char *localAddress = par("localAddress");
-            int localPort = par("localPort");
-            socket.bind(inet::Ipv4Address(localAddress), localPort);
-            const std::vector<const char *> &vector = getGateNames();
-            socket.setOutputGate(gate("socketOut"));
-            socket.setCallback(this);
-            socket.listen();
-        }
         double tOpen = par("tOpen").doubleValue();
         double tSend = par("tSend").doubleValue();
-        isReceiving = par("isReceiving").boolValue();
-        if(isReceiving){
-        } else {
-            if (inet::simTime() <= tOpen) {
-                EV_DEBUG << "schedule connect at: " << tOpen << std::endl;
-                connectSelfMessage = new inet::cMessage("timer");
-                connectSelfMessage->setKind(MSGKIND_CONNECT);
-                scheduleAt(tOpen, connectSelfMessage);
-            }
-            if (inet::simTime() <= tSend) {
-                EV_DEBUG << "schedule send" << std::endl;
-                sendDataSelfMessage = new inet::cMessage("timer");
-                sendDataSelfMessage->setKind(MSGKIND_SEND);
-                scheduleAt(tSend, sendDataSelfMessage);
-            }
+        double tListenStart = par("tListenStart").doubleValue();
+        double tListenEnd = par("tListenEnd").doubleValue();
+        isReceiving = par("isReceivingAtStart").boolValue();
+
+        //setupSocket();
+        //if(isReceiving) {
+        //    socket.listen();
+        //}
+        EV_DEBUG << "socket state: " << inet::TcpSocket::stateName(socket.getState())
+            << " on " << this->getFullPath() << std::endl;
+
+        if (inet::simTime() <= tOpen) {
+            EV_DEBUG << "schedule connect at: " << tOpen << std::endl;
+            connectSelfMessage = new inet::cMessage("timer");
+            connectSelfMessage->setKind(MSGKIND_CONNECT);
+            scheduleAt(tOpen, connectSelfMessage);
+        }
+        if (inet::simTime() <= tSend) {
+            EV_DEBUG << "schedule send at: " << tSend << std::endl;
+            sendDataSelfMessage = new inet::cMessage("timer");
+            sendDataSelfMessage->setKind(MSGKIND_SEND);
+            scheduleAt(tSend, sendDataSelfMessage);
+        }
+        if (inet::simTime() <= tListenStart) {
+            EV_DEBUG << "schedule listen start at: " << tListenStart << std::endl;
+            listenStartMessage = new inet::cMessage("timer");
+            listenStartMessage->setKind(MSGKIND_LISTEN);
+            scheduleAt(tListenStart, listenStartMessage);
+        }
+        if (inet::simTime() <= tListenEnd) {
+            EV_DEBUG << "schedule listen end at: " << tListenEnd << std::endl;
+            listenEndMessage = new inet::cMessage("timer");
+            listenEndMessage->setKind(MSGKIND_LISTEN_END);
+            scheduleAt(tListenEnd, listenEndMessage);
         }
     }
 
@@ -108,69 +145,65 @@ namespace voting {
 
     void VotingApp::initialize(int stage) {
         ApplicationBase::initialize(stage);
-        isReceiving = par("isReceiving").boolValue();
 
-         if(!isReceiving) {
-            if (stage == inet::INITSTAGE_LOCAL) {
-                numSessions = numBroken = packetsSent = packetsRcvd = bytesSent = bytesRcvd = 0;
+        if (stage == inet::INITSTAGE_LOCAL) {
+            numSessions = numBroken = packetsSent = packetsRcvd = bytesSent = bytesRcvd = 0;
 
-                WATCH(numSessions);
-                WATCH(numBroken);
-                WATCH(packetsSent);
-                WATCH(packetsRcvd);
-                WATCH(bytesSent);
-                WATCH(bytesRcvd);
-            }
-            else if (stage == inet::INITSTAGE_APPLICATION_LAYER) {
-                // parameters
-                const char *localAddress = par("localAddress");
-                int localPort = par("localPort");
-                socket.bind(inet::Ipv4Address(localAddress), localPort);
-                socket.setCallback(this);
-                socket.setOutputGate(gate("socketOut"));
-            }
+            WATCH(numSessions);
+            WATCH(numBroken);
+            WATCH(packetsSent);
+            WATCH(packetsRcvd);
+            WATCH(bytesSent);
+            WATCH(bytesRcvd);
         }
-
-        EV_DEBUG << "stage: " << stage << std::endl;
-        EV_DEBUG << "initialize" << std::endl;
     }
 
     void VotingApp::handleMessageWhenUp(omnetpp::cMessage *msg) {
-        EV_DEBUG << "handle message up: " << std::endl;
-        if(isReceiving) {
-            if (socket.belongsToSocket(msg))
-                socket.processMessage(msg);
-            else
-                 throw inet::cRuntimeError("Unknown incoming message: '%s'", msg->getName());
-        } else {
-            TcpAppBase::handleMessageWhenUp(msg);
+        EV_DEBUG << "message up" << std::endl;
+        if(msg->isSelfMessage()){
+            EV_DEBUG << "handle message up from " << this->getFullPath() << std::endl;
+            EV_DEBUG << "message is:  " << msg->str() << std::endl;
+            EV_DEBUG << "message displaystr:  " << msg->getDisplayString() << std::endl;
+            EV_DEBUG << "message kind:  " << msg->getKind() << std::endl;
+
+            EV_DEBUG << "socket state: " << inet::TcpSocket::stateName(socket.getState())
+                     << " on " << this->getFullPath() << std::endl;
+            handleTimer(msg);
+        } else if (socket.belongsToSocket(msg)) {
+            socket.processMessage(msg);
         }
+        //else
+        //     throw inet::cRuntimeError("Unknown incoming message: '%s'", msg->getName());
     }
 
     void VotingApp::socketStatusArrived(inet::TcpSocket *socket, inet::TcpStatusInfo *status) {
-        TcpAppBase::socketStatusArrived(socket, status);
         EV_DEBUG << "status arrived" << std::endl;
+        TcpAppBase::socketStatusArrived(socket, status);
+    }
+
+    void VotingApp::receiveIncomingMessages(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo){
+        const char *serverConnectionModuleType = par("serverConnectionModuleType");
+        inet::cModuleType *moduleType = inet::cModuleType::get(serverConnectionModuleType);
+        cModule *submodule = getParentModule()->getSubmodule("connection", 0);
+        int submoduleIndex = submodule == nullptr ? 0 : submodule->getVectorSize();
+        auto connection = moduleType->create("connection", this, submoduleIndex + 1, submoduleIndex);
+        connection->finalizeParameters();
+        connection->buildInside();
+        connection->callInitialize();
+        auto dispatcher = inet::check_and_cast<cSimpleModule *>(gate("socketIn")->getPathStartGate()->getOwnerModule());
+        dispatcher->setGateSize("in", dispatcher->gateSize("in") + 1);
+        dispatcher->setGateSize("out", dispatcher->gateSize("out") + 1);
+        connection->gate("socketOut")->connectTo(dispatcher->gate("in", dispatcher->gateSize("in") - 1));
+        dispatcher->gate("out", dispatcher->gateSize("out") - 1)->connectTo(connection->gate("socketIn"));
+        auto requestReplyConnection = inet::check_and_cast<VotingAppConnectionRequestReply *>(connection->gate("socketIn")->getPathEndGate()->getOwnerModule());
+        requestReplyConnection->acceptSocket(availableInfo);
+        connectionSet.insert(requestReplyConnection);
     }
 
     void VotingApp::socketAvailable(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo) {
         if(isReceiving) {
             EV_DEBUG << "Socket available receiving" << std::endl;
-            const char *serverConnectionModuleType = par("serverConnectionModuleType");
-            inet::cModuleType *moduleType = inet::cModuleType::get(serverConnectionModuleType);
-            cModule *submodule = getParentModule()->getSubmodule("connection", 0);
-            int submoduleIndex = submodule == nullptr ? 0 : submodule->getVectorSize();
-            auto connection = moduleType->create("connection", this, submoduleIndex + 1, submoduleIndex);
-            connection->finalizeParameters();
-            connection->buildInside();
-            connection->callInitialize();
-            auto dispatcher = inet::check_and_cast<cSimpleModule *>(gate("socketIn")->getPathStartGate()->getOwnerModule());
-            dispatcher->setGateSize("in", dispatcher->gateSize("in") + 1);
-            dispatcher->setGateSize("out", dispatcher->gateSize("out") + 1);
-            connection->gate("socketOut")->connectTo(dispatcher->gate("in", dispatcher->gateSize("in") - 1));
-            dispatcher->gate("out", dispatcher->gateSize("out") - 1)->connectTo(connection->gate("socketIn"));
-            auto requestReplyConnection = inet::check_and_cast<VotingAppConnectionRequestReply *>(connection->gate("socketIn")->getPathEndGate()->getOwnerModule());
-            requestReplyConnection->acceptSocket(availableInfo);
-            connectionSet.insert(requestReplyConnection);
+            receiveIncomingMessages(socket, availableInfo);
         } else {
             EV_DEBUG << "Socket available requesting" << std::endl;
             TcpAppBase::socketAvailable(socket, availableInfo);
@@ -194,5 +227,35 @@ namespace voting {
         //const std::filesystem::path &currentPath = std::filesystem::current_path();
         EV_DEBUG << "print: " << file << std::endl;
         connection_service.exportPeersList("./results/", nodes, file);
+    }
+
+    void VotingApp::listenStop() {
+        EV_DEBUG << "stopped listenning on " << this->getFullPath() << std::endl;
+        socket.renewSocket();
+    }
+
+    void VotingApp::setupSocket() {
+        const char *localAddress = par("localAddress");
+        int localPort = par("localPort");
+        socket.bind(inet::Ipv4Address(localAddress), localPort);
+        socket.setCallback(this);
+        socket.setOutputGate(gate("socketOut"));
+        const inet::L3Address &connectAddress = inet::L3Address(par("connectAddress"));
+    }
+
+    int VotingApp::getPacketsSent() {
+        return packetsSent;
+    }
+
+    int VotingApp::getBytesSent() {
+        return bytesSent;
+    }
+
+    void VotingApp::setPacketsSent(int newPacketsSent) {
+        packetsSent = newPacketsSent;
+    }
+
+    void VotingApp::setBytesSent(int newBytesSend) {
+        packetsSent = newBytesSend;
     }
 }

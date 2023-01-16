@@ -17,7 +17,7 @@ add_library(VotingSimulation SHARED
         src/inetSocketAdapter.h
         src/VotingNetworkRequestConnection.ned
         src/VotingAppConnectionRequestReply.cpp
-        src/VotingAppConnectionRequestReply.h)
+        src/VotingAppConnectionRequestReply.h src/VotingAppActivePacketSource.cpp src/VotingAppActivePacketSource.h)
 
 # Define where to look for *.ned files when using your simulation model
 set_target_properties(VotingSimulation PROPERTIES NED_FOLDERS src)

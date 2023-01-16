@@ -3,16 +3,40 @@
 //
 #include "inetSocketAdapter.h"
 #include <algorithm>
+#include <inet/common/Simsignals.h>
 
 void inetSocketAdapter::send(std::string payload) {
-    socket.send(&sendOutPacket); // send packet using TCP socket
+    inet::Packet *packet = new inet::Packet("data");
+
+    const auto &bytesChunk = inet::makeShared<inet::BytesChunk>();
+    std::vector<uint8_t> vec;
+    unsigned long length = payload.length();
+
+    int bytesSent = 0;
+    int sendBytes = 0;
+    int packetsSent = 0;
+    int numBytes = 0;
+
+    vec.resize(sendBytes);
+    for (int i = 0; i < sendBytes; i++)
+        vec[i] = (bytesSent + payload[i % length]) & 0xFF;
+
+    bytesChunk->setBytes(vec);
+    packet->insertAtBack(bytesChunk);
+
+    //votingAppComponent->emit(inet::packetSentSignal, length);
+    socket.send(packet);
+
+   // votingAppComponent->setPacketsSent(votingAppComponent->getPacketsSent() + 1);
+    //votingAppComponent->setBytesSent(votingAppComponent->getBytesSent() + numBytes);
 }
 
 void inetSocketAdapter::recvAlt() {
-    socket.listenOnce();
+    socket.listen();
 }
 
 socketMessage inetSocketAdapter::recv() {
+    socket.listen();
     return socketMessage();
 }
 

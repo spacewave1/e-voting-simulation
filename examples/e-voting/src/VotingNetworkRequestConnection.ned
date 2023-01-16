@@ -1,6 +1,7 @@
 package voting;
 
 import VotingAppConnectionRequestReply;
+import VotingAppActivePacketSource;
 import inet.applications.contract.IApp;
 import inet.queueing.contract.IPassivePacketSink;
 import inet.queueing.contract.IActivePacketSource;
@@ -13,7 +14,7 @@ module VotingNetworkRequestConnection like IApp
             input socketIn;
             output socketOut;
         submodules:
-            source: <default("ActivePacketSource")> like IActivePacketSource {
+            source: voting.VotingAppActivePacketSource {
                 parameters:
                     packetLength = default(2b);
                     productionInterval = default(2s);
