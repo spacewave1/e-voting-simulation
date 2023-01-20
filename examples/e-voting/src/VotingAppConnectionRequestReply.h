@@ -8,14 +8,14 @@
 
 #include <omnetpp/csimplemodule.h>
 #include <inet/transportlayer/contract/tcp/TcpSocket.h>
+#include "network/connectionService.h"
 
 namespace voting {
     class VotingAppConnectionRequestReply : public inet::cSimpleModule, public inet::TcpSocket::ICallback {
+
     protected:
         inet::TcpSocket *requestSocket = nullptr;
         int replyBytesSent;
-
-    protected:
         virtual void handleMessage(inet::cMessage *message) override;
 
     public:
@@ -29,8 +29,7 @@ namespace voting {
         virtual void socketFailure(inet::TcpSocket *socket, int code) override {}
         virtual void socketStatusArrived(inet::TcpSocket *socket, inet::TcpStatusInfo *status) override {}
         virtual void socketDeleted(inet::TcpSocket *socket) override {}
-
-        inet::Packet *createDataPacket(long sendBytes);
+        inet::Packet *createDataPacket(std::string send_string);
     };
 }
 

@@ -13,6 +13,7 @@
 #include "inet/applications/tcpapp/TcpServerSocketIo.h"
 #include "VotingAppConnectionRequestReply.h"
 #include "evoting/peer.h"
+#include "network/syncService.h"
 
 namespace voting {
     class VotingApp : public inet::TcpAppBase {
@@ -20,9 +21,12 @@ namespace voting {
         inet::cMessage *sendDataSelfMessage;
         inet::cMessage *listenStartMessage;
         inet::cMessage *listenEndMessage;
+        inet::cMessage *initSyncMessage;
+        inet::cMessage *forwardSyncMessage;
         std::set<VotingAppConnectionRequestReply *> connectionSet;
         bool isReceiving = false;
         connectionService connection_service;
+        syncService sync_service;
         inetSocketAdapter socket_adapter;
 
         // TODO: Migrate to use peer
@@ -31,46 +35,31 @@ namespace voting {
         std::string nodesString;
 
         void handleTimer(inet::cMessage *msg) override;
-
         void handleCrashOperation(inet::LifecycleOperation *) override;
-
         void handleStopOperation(inet::LifecycleOperation *) override;
-
         void handleStartOperation(inet::LifecycleOperation *) override;
-
         void handleMessageWhenUp(inet::cMessage *msg) override;
-
         void socketAvailable(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo) override;
-
         void socketEstablished(inet::TcpSocket *socket) override;
-
         void socketStatusArrived(inet::TcpSocket *socket, inet::TcpStatusInfo *status) override;
-
         void socketDataArrived(inet::TcpSocket *socket, inet::Packet *msg, bool urgent) override;
-
         void initialize(int stage) override;
-
-        inet::Packet *createDataPacket(long sendBytes);
 
 
     public:
+        std::set<std::string>* getNodes();
+        std::map<std::string, std::string>* getNodeConnections();
         void addNode(std::string newNode);
-
         void writeStateToFile(std::string file);
-
         void receiveIncomingMessages(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo);
-
         void listenStop();
-
-        void setupSocket();
-
+        void setupSocket(int port);
         void setPacketsSent(int newPacketsSent);
-
         void setBytesSent(int newBytesSent);
-
         int getBytesSent();
-
         int getPacketsSent();
+        connectionService *getConnectionService();
+        syncService *getSyncService();
     };
 }
 
