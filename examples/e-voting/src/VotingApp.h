@@ -11,7 +11,6 @@
 #include "inetSocketAdapter.h"
 #include "network/connectionService.h"
 #include "inet/applications/tcpapp/TcpServerSocketIo.h"
-#include "VotingAppConnectionRequestReply.h"
 #include "evoting/peer.h"
 #include "network/syncService.h"
 
@@ -22,9 +21,12 @@ namespace voting {
         inet::cMessage *listenStartMessage;
         inet::cMessage *listenEndMessage;
         inet::cMessage *initSyncMessage;
-        inet::cMessage *forwardSyncMessage;
-        std::set<VotingAppConnectionRequestReply *> connectionSet;
+        inet::cMessage *listenDownSyncMessage;
+        inet::cMessage *listenUpSyncMessage;
+        inet::cMessage *forwardUpSyncMessage;
+        inet::cMessage *returnDownSyncMessage;
         bool isReceiving = false;
+        bool doesConnect = true;
         connectionService connection_service;
         syncService sync_service;
         inetSocketAdapter socket_adapter;
@@ -33,6 +35,11 @@ namespace voting {
         std::set<std::string> nodes;
         std::map<std::string, std::string> connection_map;
         std::string nodesString;
+        int down_connect_socket_id = 0;
+        int down_sync_socket_id = 0;
+        int up_sync_socket_id = 0;
+
+        inet::SocketMap socketMap;
 
         void handleTimer(inet::cMessage *msg) override;
         void handleCrashOperation(inet::LifecycleOperation *) override;
@@ -45,7 +52,6 @@ namespace voting {
         void socketDataArrived(inet::TcpSocket *socket, inet::Packet *msg, bool urgent) override;
         void initialize(int stage) override;
 
-
     public:
         std::set<std::string>* getNodes();
         std::map<std::string, std::string>* getNodeConnections();
@@ -53,13 +59,19 @@ namespace voting {
         void writeStateToFile(std::string file);
         void receiveIncomingMessages(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo);
         void listenStop();
-        void setupSocket(int port);
+        void setupSocket(inet::TcpSocket* socket, int port);
         void setPacketsSent(int newPacketsSent);
         void setBytesSent(int newBytesSent);
         int getBytesSent();
         int getPacketsSent();
         connectionService *getConnectionService();
         syncService *getSyncService();
+        void setReceivedSyncRequestFrom(std::string requestFrom);
+
+    private:
+        std::string received_sync_request_from;
+
+        inet::Packet* createDataPacket(std::string send_string);
     };
 }
 

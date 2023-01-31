@@ -5,13 +5,26 @@
 #include "VotingApp.h"
 #include <algorithm>
 #include <inet/common/Simsignals.h>
+#include <inet/common/packet/chunk/ByteCountChunk.h>
 
 void inetSocketAdapter::send(std::string payload) {
 
     inet::Packet *packet = new inet::Packet("data");
-    packet->setKind(msg_kind);
+    
+    //VotingAppTag tag = VotingAppTag();
+    //tag.kind = APP_CONN_REQUEST;
+    //omnetpp::cObject par = (omnetpp::cObject) tag;
+    //packet->addObject(&par);
+    //inet::InterfaceReq *pReq = packet->addTag<inet::InterfaceReq>();
+    //pReq->setInterfaceId();
 
-    const auto &bytesChunk = inet::makeShared<inet::BytesChunk>();
+    //const auto &appFlowBytesChunk = inet::makeShared<inet::BytesChunk>();
+    auto byteCountData = inet::makeShared<inet::BytesChunk>();
+    std::vector<uint8_t> appData{ msg_kind };
+    byteCountData->setBytes(appData);
+
+
+    const auto &addressDataChunk = inet::makeShared<inet::BytesChunk>();
     std::vector<uint8_t> vec;
     unsigned long length = payload.length();
 
@@ -22,8 +35,11 @@ void inetSocketAdapter::send(std::string payload) {
     for (int i = 0; i < sendBytes; i++)
         vec[i] = (bytesSent + payload[i % length]) & 0xFF;
 
-    bytesChunk->setBytes(vec);
-    packet->insertAtBack(bytesChunk);
+    //appFlowBytesChunk->setByte(1, APP_CONN_REQUEST);
+    addressDataChunk->setBytes(vec);
+
+    packet->insertAtBack(addressDataChunk);
+    packet->insertAtFront(byteCountData);
 
     parentComponent->emit(inet::packetSentSignal, packet);
     socket->send(packet);
@@ -40,8 +56,9 @@ void inetSocketAdapter::recvAlt() {
 
 socketMessage inetSocketAdapter::recv() {
     //socket.listen();
-    socketMessage &message = programmed_message_queue.front();
+    socketMessage message = programmed_message_queue.front();
     programmed_message_queue.pop();
+    _logger.log(message.payload);
     return message;
 }
 
@@ -94,10 +111,10 @@ inet::TcpSocket *inetSocketAdapter::getSocket() {
     return socket;
 }
 
-void inetSocketAdapter::setMsgKind(short msgKind) {
+void inetSocketAdapter::setMsgKind(uint8_t msgKind) {
     this->msg_kind = msgKind;
 }
 
-short inetSocketAdapter::getMsgKind() const {
+uint8_t inetSocketAdapter::getMsgKind() const {
     return msg_kind;
 }

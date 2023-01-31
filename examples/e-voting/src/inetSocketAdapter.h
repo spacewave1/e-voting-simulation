@@ -8,7 +8,7 @@
 #include <queue>
 #include "inet/transportlayer/contract/tcp/TcpSocket.h"
 #include "network/abstractSocket.h"
-#include "VotingAppConnectionRequestReply.h"
+#include "evoting/logger.h"
 
 class inetSocketAdapter : public abstractSocket {
 public:
@@ -30,17 +30,17 @@ public:
     void setParentComponent(inet::cComponent* component);
     void addProgrammedMessage(socketMessage message);
 
-    void setMsgKind(short msgKind);
+    void setMsgKind(uint8_t msgKind);
 
-    short getMsgKind() const;
+    uint8_t getMsgKind() const;
 
 private:
     inet::Packet sendOutPacket;
     inet::TcpSocket* socket;
-    voting::VotingAppConnectionRequestReply* requestReplyConnection;
     inet::cComponent* parentComponent;
     std::queue<socketMessage> programmed_message_queue;
-    short msg_kind;
+    uint8_t msg_kind;
+    logger _logger = logger::Instance();
 };
 
 
