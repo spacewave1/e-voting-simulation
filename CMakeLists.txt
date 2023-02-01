@@ -21,4 +21,5 @@ import_opp_target(INET ${INET_DIR}/src/Makefile)
 
 add_subdirectory(examples/basic)
 add_subdirectory(examples/pcaprecorder)
-add_subdirectory(examples/e-voting)
+add_subdirectory(examples/e-voting-setup)
+add_subdirectory(examples/e-voting-execution)

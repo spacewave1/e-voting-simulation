@@ -1,0 +1,431 @@
+version 2
+run General-0-20230103-17:55:25-100515
+attr configname General
+attr datetime 20230103-17:55:25
+attr experiment General
+attr inifile omnetpp.ini
+attr iterationvars ""
+attr iterationvarsf ""
+attr measurement ""
+attr network voting.Simulation
+attr processid 100515
+attr repetition 0
+attr replication #0
+attr resultdir results
+attr runnumber 0
+attr seedset 0
+param *.ethHost1.numApps 1
+param *.ethHost1.app[0].typename "\"voting.VotingApp\""
+param *.ethHost1.app[0].dataTransferMode "\"bytestream\""
+param *.ethHost1.app[0].active true
+param *.ethHost1.app[0].connectAddress "\"10.0.0.5\""
+param *.ethHost1.app[0].localAddress "\"10.0.0.1\""
+param *.ethHost1.app[0].localPort 5555
+param *.ethHost1.app[0].tOpen 0.02s
+param *.ethHost1.app[0].tSend 0.04s
+param *.ethHost1.app[0].sendScript "\"\""
+param *.ethHost1.app[0].tClose 2.5s
+param *.ethHost1.app[0].echoFactor 2.0
+param *.ethHost1.app[0].replyDelay 0.01s
+param *.ethHost1.app[0].stopOperationExtraTime -0.1s
+param *.ethHost1.app[0].stopOperationTimeout 0.5s
+param *.ethHost1.app[0].serverThreadModuleType "\"voting.VotingAppForwardThread\""
+param *.ethHost2.numApps 1
+param *.ethHost2.app[0].typename "\"voting.VotingApp\""
+param *.ethHost2.app[0].dataTransferMode "\"bytestream\""
+param *.ethHost2.app[0].active true
+param *.ethHost2.app[0].connectAddress "\"10.0.0.9\""
+param *.ethHost2.app[0].localAddress "\"10.0.0.5\""
+param *.ethHost2.app[0].localPort 5555
+param *.ethHost2.app[0].tOpen 0.12s
+param *.ethHost2.app[0].tSend 0.14s
+param *.ethHost2.app[0].sendScript "\"\""
+param *.ethHost2.app[0].tClose 3.5s
+param *.ethHost2.app[0].echoFactor 2.0
+param *.ethHost2.app[0].replyDelay 0.01s
+param *.ethHost2.app[0].stopOperationExtraTime -0.1s
+param *.ethHost2.app[0].stopOperationTimeout 0.5s
+param *.ethHost2.app[0].serverThreadModuleType "\"voting.VotingAppForwardThread\""
+param *.ethHost3.numApps 1
+param *.ethHost3.app[0].typename "\"voting.VotingApp\""
+param *.ethHost3.app[0].dataTransferMode "\"bytestream\""
+param *.ethHost3.app[0].active true
+param *.ethHost3.app[0].connectAddress "\"10.0.0.13\""
+param *.ethHost3.app[0].localAddress "\"10.0.0.9\""
+param *.ethHost3.app[0].localPort 5555
+param *.ethHost3.app[0].tOpen 0.22s
+param *.ethHost3.app[0].tSend 0.24s
+param *.ethHost3.app[0].sendScript "\"\""
+param *.ethHost3.app[0].tClose 4.5s
+param *.ethHost3.app[0].echoFactor 2.0
+param *.ethHost3.app[0].replyDelay 0.01s
+param *.ethHost3.app[0].stopOperationExtraTime -0.1s
+param *.ethHost3.app[0].stopOperationTimeout 0.5s
+param *.ethHost3.app[0].serverThreadModuleType "\"voting.VotingAppForwardThread\""
+param *.ethHost4.numApps 1
+param *.ethHost4.app[0].typename "\"voting.VotingApp\""
+param *.ethHost4.app[0].dataTransferMode "\"bytestream\""
+param *.ethHost4.app[0].active true
+param *.ethHost4.app[0].connectAddress "\"10.0.0.1\""
+param *.ethHost4.app[0].localAddress "\"10.0.0.13\""
+param *.ethHost4.app[0].localPort 5555
+param *.ethHost4.app[0].tOpen 0.32s
+param *.ethHost4.app[0].tSend 0.34s
+param *.ethHost4.app[0].sendScript "\"\""
+param *.ethHost4.app[0].tClose 4.5s
+param *.ethHost4.app[0].echoFactor 2.0
+param *.ethHost4.app[0].replyDelay 0.01s
+param *.ethHost4.app[0].stopOperationExtraTime -0.1s
+param *.ethHost4.app[0].stopOperationTimeout 0.5s
+param *.ethHost4.app[0].serverThreadModuleType "\"voting.VotingAppForwardThread\""
+param **.crcMode "\"computed\""
+param **.fcsMode "\"computed\""
+param *.ethHost1.numPcapRecorders 1
+param *.ethHost1.pcapRecorder[*].pcapLinkType 101
+param *.ethHost1.pcapRecorder[*].pcapFile "\"results/ethHost2.ip.pcap\""
+param *.ethHost1.pcapRecorder[*].moduleNamePatterns "\"ipv4\""
+param *.ethHost1.pcapRecorder[*].dumpProtocols "\"ipv4\""
+param *.ethHost3.numPcapRecorders 1
+param *.ethHost3.pcapRecorder[*].pcapLinkType 101
+param *.ethHost3.pcapRecorder[*].pcapFile "\"results/ethHost3.ip.pcap\""
+param *.ethHost3.pcapRecorder[*].moduleNamePatterns "\"ipv4\""
+param *.ethHost3.pcapRecorder[*].dumpProtocols "\"ipv4\""
+param *.ethHost4.numPcapRecorders 1
+param *.ethHost4.pcapRecorder[*].pcapLinkType 101
+param *.ethHost4.pcapRecorder[*].pcapFile "\"results/ethHost4.ip.pcap\""
+param *.ethHost4.pcapRecorder[*].moduleNamePatterns "\"ipv4\""
+param *.ethHost4.pcapRecorder[*].dumpProtocols "\"ipv4\""
+param *.router1.numPcapRecorders 2
+param *.router1.pcapRecorder[0].pcapLinkType 204
+param *.router1.pcapRecorder[0].moduleNamePatterns "\"ppp[*]\""
+param *.router1.pcapRecorder[0].pcapFile "\"results/router1.ppp.pcap\""
+param *.router1.pcapRecorder[1].pcapLinkType 1
+param *.router1.pcapRecorder[1].pcapFile "\"results/router1.eth.pcap\""
+param *.router1.pcapRecorder[1].moduleNamePatterns "\"eth[*]\""
+param *.router2.numPcapRecorders 1
+param *.router2.pcapRecorder[*].pcapLinkType 1
+param *.router2.pcapRecorder[*].moduleNamePatterns "\"eth[*]\""
+param *.router2.pcapRecorder[*].pcapFile "\"results/router2.tcpdata.pcap\""
+param *.router2.pcapRecorder[*].packetDataFilter "\"*Ipv4Header and totalLengthField=~576*\""
+param *.ethHost2.numPcapRecorders 1
+param *.ethHost2.pcapRecorder[*].pcapLinkType 101
+param *.ethHost2.pcapRecorder[*].pcapFile "\"results/ethHost2.ip.pcap\""
+param *.ethHost2.pcapRecorder[*].moduleNamePatterns "\"ipv4\""
+param *.ethHost2.pcapRecorder[*].dumpProtocols "\"ipv4\""
+param **.pcapRecorder[*].verbose true
+param **.pcapRecorder[*].alwaysFlush true
+param *.visualizer.*.numDataLinkVisualizers 2
+param *.visualizer.*.numInterfaceTableVisualizers 2
+param *.visualizer.*.dataLinkVisualizer[0].displayLinks true
+param *.visualizer.*.dataLinkVisualizer[0].packetFilter "\"not *ping*\""
+param *.visualizer.*.physicalLinkVisualizer[*].displayLinks true
+param *.visualizer.*.interfaceTableVisualizer[0].displayInterfaceTables true
+param *.visualizer.*.interfaceTableVisualizer[0].format "\"%N\""
+param *.visualizer.*.interfaceTableVisualizer[1].displayInterfaceTables true
+param *.visualizer.*.interfaceTableVisualizer[1].format "\"%a\""
+param *.visualizer.*.interfaceTableVisualizer[1].displayWiredInterfacesAtConnections false
+param *.visualizer.*.transportConnectionVisualizer[*].displayTransportConnections true
+param *.visualizer.*.dataLinkVisualizer[1].displayLinks true
+param *.visualizer.*.dataLinkVisualizer[1].packetFilter "\"*ping*\""
+param *.visualizer.*.dataLinkVisualizer[1].lineColor "\"red\""
+param *.visualizer.*.infoVisualizer[*].modules "\"*.*.pcapRecorder[*]\""
+param *.visualizer.*.infoVisualizer[*].format "\"%t\""
+
+vector 0 Simulation.router1.ppp[0].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 1 Simulation.router1.ppp[1].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 2 Simulation.router1.ppp[2].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 3 Simulation.router2.ppp[0].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 4 Simulation.router2.ppp[1].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 5 Simulation.router2.ppp[2].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 6 Simulation.router3.ppp[0].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 7 Simulation.router3.ppp[1].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 8 Simulation.router3.ppp[2].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 9 Simulation.router4.ppp[0].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 10 Simulation.router4.ppp[1].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 11 Simulation.router4.ppp[2].ppp transmissionState:vector ETV
+attr interpolationmode sample-hold
+attr source transmissionStateChanged
+attr title "tx state, vector"
+vector 12 Simulation.ethHost1.tcp.conn-28 tcpRcvQueueBytes:vector ETV
+attr interpolationmode sample-hold
+vector 13 Simulation.ethHost1.tcp.conn-28 rcvAdv:vector ETV
+attr interpolationmode sample-hold
+vector 14 Simulation.ethHost1.tcp.conn-28 rcvWnd:vector ETV
+attr interpolationmode sample-hold
+vector 15 Simulation.ethHost1.tcp.conn-28 sndAck:vector ETV
+attr interpolationmode sample-hold
+vector 16 Simulation.ethHost1.ipv4.arp arpRequestSent:vector(packetBytes) ETV
+attr source arpRequestSent
+attr title "ARP request sent, vector(packetBytes)"
+vector 17 Simulation.ethHost1.eth[0].encap encapPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source encapPk
+attr title "packets encapsulated, vector(packetBytes)"
+vector 18 Simulation.ethHost1.eth[0].mac packetReceivedFromUpper:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetReceivedFromUpper
+attr title "packet bytes from higher layer, vector(packetBytes)"
+vector 19 Simulation.ethHost1.eth[0].mac.queue packetPushed:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet pushed, vector(packetBytes)"
+vector 20 Simulation.ethHost1.eth[0].mac.queue queueLength:vector ETV
+attr interpolationmode sample-hold
+attr source "count(packetPushed) - count(packetPopped) - count(packetRemoved) - count(packetDropped)"
+attr title "queue length, vector"
+vector 21 Simulation.ethHost1.eth[0].mac.queue packetPopped:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet popped, vector(packetBytes)"
+vector 22 Simulation.ethHost1.eth[0].mac.queue queueingTime:vector ETV
+attr interpolationmode none
+attr source queueingTime(packetPopped)
+attr title "queueing times, vector"
+attr unit s
+vector 23 Simulation.ethHost1.eth[0].mac txPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToLower
+attr title "packets transmitted, vector(packetBytes)"
+vector 24 Simulation.router1.eth[0].mac rxPkOk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source rxPkOk
+attr title "packets received OK, vector(packetBytes)"
+vector 25 Simulation.router1.eth[0].mac passedUpPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToUpper
+attr title "packets passed to higher layer, vector(packetBytes)"
+vector 26 Simulation.router1.eth[0].encap decapPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source decapPk
+attr title "packets decapsulated, vector(packetBytes)"
+vector 27 Simulation.router1.ipv4.arp arpReplySent:vector(packetBytes) ETV
+attr source arpReplySent
+attr title "ARP replies sent, vector(packetBytes)"
+vector 28 Simulation.router1.eth[0].encap encapPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source encapPk
+attr title "packets encapsulated, vector(packetBytes)"
+vector 29 Simulation.router1.eth[0].mac packetReceivedFromUpper:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetReceivedFromUpper
+attr title "packet bytes from higher layer, vector(packetBytes)"
+vector 30 Simulation.router1.eth[0].mac.queue packetPushed:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet pushed, vector(packetBytes)"
+vector 31 Simulation.router1.eth[0].mac.queue queueLength:vector ETV
+attr interpolationmode sample-hold
+attr source "count(packetPushed) - count(packetPopped) - count(packetRemoved) - count(packetDropped)"
+attr title "queue length, vector"
+vector 32 Simulation.router1.eth[0].mac.queue packetPopped:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet popped, vector(packetBytes)"
+vector 33 Simulation.router1.eth[0].mac.queue queueingTime:vector ETV
+attr interpolationmode none
+attr source queueingTime(packetPopped)
+attr title "queueing times, vector"
+attr unit s
+vector 34 Simulation.router1.eth[0].mac txPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToLower
+attr title "packets transmitted, vector(packetBytes)"
+vector 35 Simulation.ethHost1.eth[0].mac rxPkOk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source rxPkOk
+attr title "packets received OK, vector(packetBytes)"
+vector 36 Simulation.ethHost1.eth[0].mac passedUpPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToUpper
+attr title "packets passed to higher layer, vector(packetBytes)"
+vector 37 Simulation.ethHost1.eth[0].encap decapPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source decapPk
+attr title "packets decapsulated, vector(packetBytes)"
+vector 38 Simulation.router1.ppp[0].ppp rcvdPkFromHl:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetReceivedFromUpper
+attr title "packets received from higher layer, vector(packetBytes)"
+vector 39 Simulation.router1.ppp[0].ppp.queue packetPushed:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet pushed, vector(packetBytes)"
+vector 40 Simulation.router1.ppp[0].ppp.queue queueLength:vector ETV
+attr interpolationmode sample-hold
+attr source "count(packetPushed) - count(packetPopped) - count(packetRemoved) - count(packetDropped)"
+attr title "queue length, vector"
+vector 41 Simulation.router1.ppp[0].ppp.queue packetPopped:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet popped, vector(packetBytes)"
+vector 42 Simulation.router1.ppp[0].ppp.queue queueingTime:vector ETV
+attr interpolationmode none
+attr source queueingTime(packetPopped)
+attr title "queueing times, vector"
+attr unit s
+vector 43 Simulation.router1.ppp[0].ppp txPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToLower
+attr title "packets transmitted, vector(packetBytes)"
+vector 44 Simulation.router2.ppp[0].ppp rxPkOk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source rxPkOk
+attr title "packets received OK, vector(packetBytes)"
+vector 45 Simulation.router2.ppp[0].ppp passedUpPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToUpper
+attr title "packets passed to higher layer, vector(packetBytes)"
+vector 46 Simulation.router2.ipv4.arp arpRequestSent:vector(packetBytes) ETV
+attr source arpRequestSent
+attr title "ARP request sent, vector(packetBytes)"
+vector 47 Simulation.router2.eth[0].encap encapPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source encapPk
+attr title "packets encapsulated, vector(packetBytes)"
+vector 48 Simulation.router2.eth[0].mac packetReceivedFromUpper:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetReceivedFromUpper
+attr title "packet bytes from higher layer, vector(packetBytes)"
+vector 49 Simulation.router2.eth[0].mac.queue packetPushed:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet pushed, vector(packetBytes)"
+vector 50 Simulation.router2.eth[0].mac.queue queueLength:vector ETV
+attr interpolationmode sample-hold
+attr source "count(packetPushed) - count(packetPopped) - count(packetRemoved) - count(packetDropped)"
+attr title "queue length, vector"
+vector 51 Simulation.router2.eth[0].mac.queue packetPopped:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet popped, vector(packetBytes)"
+vector 52 Simulation.router2.eth[0].mac.queue queueingTime:vector ETV
+attr interpolationmode none
+attr source queueingTime(packetPopped)
+attr title "queueing times, vector"
+attr unit s
+vector 53 Simulation.router2.eth[0].mac txPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToLower
+attr title "packets transmitted, vector(packetBytes)"
+vector 54 Simulation.ethHost2.eth[0].mac rxPkOk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source rxPkOk
+attr title "packets received OK, vector(packetBytes)"
+vector 55 Simulation.ethHost2.eth[0].mac passedUpPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToUpper
+attr title "packets passed to higher layer, vector(packetBytes)"
+vector 56 Simulation.ethHost2.eth[0].encap decapPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source decapPk
+attr title "packets decapsulated, vector(packetBytes)"
+vector 57 Simulation.ethHost2.ipv4.arp arpReplySent:vector(packetBytes) ETV
+attr source arpReplySent
+attr title "ARP replies sent, vector(packetBytes)"
+vector 58 Simulation.ethHost2.eth[0].encap encapPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source encapPk
+attr title "packets encapsulated, vector(packetBytes)"
+vector 59 Simulation.ethHost2.eth[0].mac packetReceivedFromUpper:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetReceivedFromUpper
+attr title "packet bytes from higher layer, vector(packetBytes)"
+vector 60 Simulation.ethHost2.eth[0].mac.queue packetPushed:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet pushed, vector(packetBytes)"
+vector 61 Simulation.ethHost2.eth[0].mac.queue queueLength:vector ETV
+attr interpolationmode sample-hold
+attr source "count(packetPushed) - count(packetPopped) - count(packetRemoved) - count(packetDropped)"
+attr title "queue length, vector"
+vector 62 Simulation.ethHost2.eth[0].mac.queue packetPopped:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet popped, vector(packetBytes)"
+vector 63 Simulation.ethHost2.eth[0].mac.queue queueingTime:vector ETV
+attr interpolationmode none
+attr source queueingTime(packetPopped)
+attr title "queueing times, vector"
+attr unit s
+vector 64 Simulation.ethHost2.eth[0].mac txPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToLower
+attr title "packets transmitted, vector(packetBytes)"
+vector 65 Simulation.router2.eth[0].mac rxPkOk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source rxPkOk
+attr title "packets received OK, vector(packetBytes)"
+vector 66 Simulation.router2.eth[0].mac passedUpPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToUpper
+attr title "packets passed to higher layer, vector(packetBytes)"
+vector 67 Simulation.router2.eth[0].encap decapPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source decapPk
+attr title "packets decapsulated, vector(packetBytes)"
+vector 68 Simulation.ethHost2.tcp.conn-7 rcvSeq:vector ETV
+attr interpolationmode sample-hold
+vector 69 Simulation.ethHost2.tcp.conn-7 rcvAck:vector ETV
+attr interpolationmode sample-hold
+vector 70 Simulation.ethHost2.tcp.conn-29 rcvAdv:vector ETV
+attr interpolationmode sample-hold
+vector 71 Simulation.ethHost2.tcp.conn-29 sndWnd:vector ETV
+attr interpolationmode sample-hold
+vector 72 Simulation.ethHost2.tcp.conn-29 tcpRcvQueueBytes:vector ETV
+attr interpolationmode sample-hold
+vector 73 Simulation.ethHost2.tcp.conn-29 rcvWnd:vector ETV
+attr interpolationmode sample-hold
+vector 74 Simulation.ethHost2.tcp.conn-29 sndAck:vector ETV
+attr interpolationmode sample-hold
+vector 75 Simulation.router2.ppp[0].ppp rcvdPkFromHl:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetReceivedFromUpper
+attr title "packets received from higher layer, vector(packetBytes)"
+vector 76 Simulation.router2.ppp[0].ppp.queue packetPushed:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet pushed, vector(packetBytes)"
+vector 77 Simulation.router2.ppp[0].ppp.queue queueLength:vector ETV
+attr interpolationmode sample-hold
+attr source "count(packetPushed) - count(packetPopped) - count(packetRemoved) - count(packetDropped)"
+attr title "queue length, vector"
+vector 78 Simulation.router2.ppp[0].ppp.queue packetPopped:vector(packetBytes) ETV
+attr interpolationmode none
+attr title "packet popped, vector(packetBytes)"
+vector 79 Simulation.router2.ppp[0].ppp.queue queueingTime:vector ETV
+attr interpolationmode none
+attr source queueingTime(packetPopped)
+attr title "queueing times, vector"
+attr unit s
+vector 80 Simulation.router2.ppp[0].ppp txPk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source packetSentToLower
+attr title "packets transmitted, vector(packetBytes)"
+vector 81 Simulation.router1.ppp[0].ppp rxPkOk:vector(packetBytes) ETV
+attr interpolationmode none
+attr source rxPkOk
+attr title "packets received OK, vector(packetBytes)"
+vector 82 Simulation.router1.ppp[0].ppp passedUpPk:vector(packetBytes) ETV
+attr interpol

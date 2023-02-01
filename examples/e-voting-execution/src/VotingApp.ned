@@ -10,19 +10,11 @@ simple VotingApp like IApp
         bool active = default(true);
         bool isReceivingAtStart = default(false);
         string connectAddress;
-        int connectPort = default(5555);
-        int syncForwardPort = default(5556);
-        int syncReturnPort = default(5557);
-        double tOpen @unit(s) = default(1s);
-        double tSend @unit(s) = default(1s);
-        double tClose @unit(s) = default(2s);
-        double tListenStart @unit(s) = default(0s);
-        double tListenEnd @unit(s) = default(5s);
-        double tSyncInit @unit(s) = default(3s);
-        double tListenUpSync @unit(s) = default(3s);
-        double tListenDownSync @unit(s) = default(3s);
-        double tForwardUpSync @unit(s) = default(3s);
-        double tReturnDownSync @unit(s) = default(3s);
+        int threePDownPort = default(5049);
+        int threePUpPort = default(5051);
+        double tThreePRequest @unit(s) = default(1.5s);
+        double tThreePReceive @unit(s) = default(1s);
+        double tCreateElection @unit(s) = default(-1s);
         int timeToLive = default(-1); // if not -1, set the TTL (IPv4) or Hop Limit (IPv6) field of sent packets to this value
         int dscp = default(-1); // if not -1, set the DSCP (IPv4/IPv6) field of sent packets to this value
         int tos = default(-1); // if not -1, set the Type Of Service (IPv4) / Traffic Class (IPv6) field of sent packets to this value

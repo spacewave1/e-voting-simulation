@@ -1,27 +1,28 @@
 # This is a basic example of an OMNeT++ project using CMake.
 # Compared to more advanced projects, this example depends only on OMNeT++ itself.
 
-project(VotingSimulationProject)
+project(VotingSetupProject)
 cmake_minimum_required(VERSION 3.13)
 
 include_directories(../../../core/src)
 
 # OMNeT++ projects are usually built as shared objects (dynamic libraries),
 # which are loaded and executed by opp_run or opp_run_debug later on (see add_opp_run below).
-add_library(VotingSimulation SHARED
-        src/VotingApp.h
-        src/VotingApp.cc
-        src/VotingApp.ned
+add_library(VotingSetup SHARED
+        src/VotingSetupApp.h
+        src/VotingSetupApp.cc
+        src/VotingSetupApp.ned
         src/Voting.ned
-        src/inetSocketAdapter.cpp
-        src/inetSocketAdapter.h
-        src/PacketsKind.h)
+        ../../src/inetSocketAdapter.h
+        ../../src/inetSocketAdapter.cpp
+        ../../src/PacketsKind.h
+        )
 
 # Define where to look for *.ned files when using your simulation model
-set_target_properties(VotingSimulation PROPERTIES NED_FOLDERS src)
+set_target_properties(VotingSetup PROPERTIES NED_FOLDERS src)
 
 # Our library depends on the OMNeT++ libraries
-target_link_libraries(VotingSimulation PUBLIC OmnetPP::sim INET vote_core)
+target_link_libraries(VotingSetup PUBLIC OmnetPP::sim INET vote_core)
 
 #generate_opp_message(src/Tone.msg TARGET PcapRecorder)
 
@@ -39,7 +40,7 @@ target_link_libraries(VotingSimulation PUBLIC OmnetPP::sim INET vote_core)
 include(AddOppRun)
 #add_opp_run(basic DEPENDENCY basic_example WORKING_DIRECTORY run)
 
-add_opp_run(voting DEPENDENCY INET DEPENDENCY VotingSimulation WORKING_DIRECTORY run)
+add_opp_run(votingSetup DEPENDENCY INET DEPENDENCY VotingSetup WORKING_DIRECTORY run)
 
 # Bonus: test cases for your simulation model
 #
@@ -48,4 +49,4 @@ add_opp_run(voting DEPENDENCY INET DEPENDENCY VotingSimulation WORKING_DIRECTORY
 # add_opp_run(basic ...).
 # You can run the tests via `make test` or invoking `ctest` in your build directory.
 enable_testing()
-add_opp_test(voting CONFIG Reverse SIMTIME_LIMIT 20s SUFFIX reversed)
+add_opp_test(votingSetup CONFIG Reverse SIMTIME_LIMIT 20s SUFFIX reversed)

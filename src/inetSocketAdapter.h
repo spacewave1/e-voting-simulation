@@ -6,9 +6,9 @@
 #define E_VOTING_INETSOCKETADAPTER_H
 
 #include <queue>
-#include "inet/transportlayer/contract/tcp/TcpSocket.h"
 #include "network/abstractSocket.h"
 #include "evoting/logger.h"
+#include "inet/transportlayer/contract/tcp/TcpSocket.h"
 
 class inetSocketAdapter : public abstractSocket {
 public:
@@ -21,26 +21,22 @@ public:
     void unbind(std::string protocol, std::string address, size_t port = 0) override;
     void close() override;
     bool isBound() override;
-    void setSendPacket(inet::Packet& packet);
     void setSocket(inet::TcpSocket* socket);
-    inet::TcpSocket* getSocket();
     void recvAlt() override;
-
     //void socketDataArrived(inet::TcpSocket *socket, inet::Packet *packet, bool urgent) override;
     void setParentComponent(inet::cComponent* component);
     void addProgrammedMessage(socketMessage message);
-
     void setMsgKind(uint8_t msgKind);
-
-    uint8_t getMsgKind() const;
+    int getBytesSent() const;
 
 private:
-    inet::Packet sendOutPacket;
+    inet::Packet* sendOutPacket;
     inet::TcpSocket* socket;
     inet::cComponent* parentComponent;
     std::queue<socketMessage> programmed_message_queue;
     uint8_t msg_kind;
     logger _logger = logger::Instance();
+    long bytesSent = 0;
 };
 
 

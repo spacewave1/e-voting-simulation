@@ -8,23 +8,15 @@
 #include "inet/common/INETDefs.h"
 #include <inet/applications/tcpapp/TcpSessionApp.h>
 #include <inet/common/socket/SocketMap.h>
-#include "inetSocketAdapter.h"
 #include "network/connectionService.h"
 #include "inet/applications/tcpapp/TcpServerSocketIo.h"
 #include "evoting/peer.h"
 #include "network/syncService.h"
+#include "../../../src/inetSocketAdapter.h"
 
 namespace voting {
     class VotingApp : public inet::TcpAppBase {
-        inet::cMessage *connectSelfMessage;
-        inet::cMessage *sendDataSelfMessage;
-        inet::cMessage *listenStartMessage;
-        inet::cMessage *listenEndMessage;
-        inet::cMessage *initSyncMessage;
-        inet::cMessage *listenDownSyncMessage;
-        inet::cMessage *listenUpSyncMessage;
-        inet::cMessage *forwardUpSyncMessage;
-        inet::cMessage *returnDownSyncMessage;
+        inet::cMessage *createElectionSelfMessage;
         bool isReceiving = false;
         bool doesConnect = true;
         connectionService connection_service;
@@ -53,20 +45,8 @@ namespace voting {
         void initialize(int stage) override;
 
     public:
-        std::set<std::string>* getNodes();
-        std::map<std::string, std::string>* getNodeConnections();
-        void addNode(std::string newNode);
         void writeStateToFile(std::string file);
-        void receiveIncomingMessages(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo);
-        void listenStop();
         void setupSocket(inet::TcpSocket* socket, int port);
-        void setPacketsSent(int newPacketsSent);
-        void setBytesSent(int newBytesSent);
-        int getBytesSent();
-        int getPacketsSent();
-        connectionService *getConnectionService();
-        syncService *getSyncService();
-        void setReceivedSyncRequestFrom(std::string requestFrom);
 
     private:
         std::string received_sync_request_from;
