@@ -13,25 +13,58 @@
 #include "evoting/peer.h"
 #include "network/syncService.h"
 #include "../../../src/inetSocketAdapter.h"
+#include "evoting/distributionService.h"
 
 namespace voting {
     class VotingApp : public inet::TcpAppBase {
         inet::cMessage *createElectionSelfMessage;
+        inet::cMessage *placeVoteSelfMessage;
+        inet::cMessage *receive3PReqestSelfMessage;
+        inet::cMessage *forwardDirectionRequestSelfMessage;
+        inet::cMessage *publishSelfMessage;
+        inet::cMessage *hopsSelfMessage;
+        inet::cMessage *directionSelfMessage;
+        inet::cMessage *subscribeSelfMessage;
         bool isReceiving = false;
+        bool isInitializingDirectionDistribution = false;
         bool doesConnect = true;
         connectionService connection_service;
-        syncService sync_service;
-        inetSocketAdapter socket_adapter;
+        distributionService distribution_service;
+
+        inetSocketAdapter socket_up_adapter;
+        inetSocketAdapter socket_down_adapter;
+        inetSocketAdapter socket_no_direction_adapter;
+        inetSocketAdapter subscribe_socket_adapter;
+        inetSocketAdapter publish_socket_adapter;
+
+        inet::TcpSocket* publish_socket = new inet::TcpSocket();
+        inet::TcpSocket* subscribe_socket = new inet::TcpSocket();
+
+        std::string address_up, address_down = "";
+        int publish_port, subscribe_port;
+        std::vector<election> election_box;
+
+        size_t position = 0;
+
+        std::string sendTowards = "";
+
+        omnetpp::cMsgPar *nextDirection;
+        omnetpp::cMsgPar *received3PData;
 
         // TODO: Migrate to use peer
         std::set<std::string> nodes;
         std::map<std::string, std::string> connection_map;
         std::string nodesString;
-        int down_connect_socket_id = 0;
-        int down_sync_socket_id = 0;
-        int up_sync_socket_id = 0;
+
+        int down_socket_id = 0;
+
+        size_t current_hops = 0;
+        std::string received_direction;
 
         inet::SocketMap socketMap;
+
+        double pauseBeforePublish = 0.0;
+        double pauseBeforeForwardPortsRequest = 0.0;
 
         void handleTimer(inet::cMessage *msg) override;
         void handleCrashOperation(inet::LifecycleOperation *) override;
@@ -46,12 +79,9 @@ namespace voting {
 
     public:
         void writeStateToFile(std::string file);
-        void setupSocket(inet::TcpSocket* socket, int port);
 
     private:
         std::string received_sync_request_from;
-
-        inet::Packet* createDataPacket(std::string send_string);
     };
 }
 

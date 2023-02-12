@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <inet/common/Simsignals.h>
 #include <inet/common/packet/chunk/ByteCountChunk.h>
+#include <inet/applications/tcpapp/TcpAppBase.h>
 
 void inetSocketAdapter::send(std::string payload) {
 
@@ -55,7 +56,10 @@ void inetSocketAdapter::disconnect(std::string protocol, std::string address, si
 }
 
 void inetSocketAdapter::connect(std::string protocol, std::string address, size_t port) {
-   socket->connect(inet::Ipv4Address(address.c_str()),port);
+    if(socket->getState() == inet::TcpSocket::CONNECTING){
+        socket->renewSocket();
+    }
+    socket->connect(inet::Ipv4Address(address.c_str()),port);
 }
 
 void inetSocketAdapter::bind(std::string protocol, std::string address, size_t port) {
@@ -68,6 +72,7 @@ void inetSocketAdapter::unbind(std::string protocol, std::string address, size_t
 
 void inetSocketAdapter::close() {
     socket->close();
+    socket->destroy();
 }
 
 bool inetSocketAdapter::isBound() {
@@ -92,4 +97,12 @@ void inetSocketAdapter::setMsgKind(uint8_t msgKind) {
 
 int inetSocketAdapter::getBytesSent() const {
     return sendOutPacket->getByteLength();
+}
+
+void inetSocketAdapter::setupSocket(std::string localAddress, size_t port) {
+    socket->renewSocket();
+    socket->bind(inet::Ipv4Address(localAddress.c_str()), port);
+    auto* tcpApp = reinterpret_cast<inet::TcpAppBase*>(parentComponent);
+    socket->setCallback(tcpApp);
+    socket->setOutputGate(tcpApp->gate("socketOut"));
 }

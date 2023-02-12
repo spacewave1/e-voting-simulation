@@ -28,6 +28,7 @@ public:
     void addProgrammedMessage(socketMessage message);
     void setMsgKind(uint8_t msgKind);
     int getBytesSent() const;
+    void setupSocket(std::string localAddress, size_t port) override;
 
 private:
     inet::Packet* sendOutPacket;
@@ -37,6 +38,7 @@ private:
     uint8_t msg_kind;
     logger _logger = logger::Instance();
     long bytesSent = 0;
+
 };
 
 

@@ -30,7 +30,7 @@ namespace voting {
 
     void VotingSetupApp::handleStartOperation(inet::LifecycleOperation *) {
         // Export state at beginning
-        writeStateToFile("connection/peers_at_start_" + this->getFullPath().substr(0,19) + ".json");
+        writeStateToFile("connection/", "at_start_" + this->getFullPath().substr(0,19) + ".json");
 
         // Schedule events
         double tOpen = par("tOpen").doubleValue();
@@ -289,7 +289,7 @@ namespace voting {
                     std::string localAddress{par("localAddress").stringValue()};
 
                     connection_service.computeConnectionReply(socketMessage{std::string(content_str), connectAddress}, nodes, connection_map, localAddress);
-                    writeStateToFile("connection/peers_after_data_received_reply_" + getFullPath().substr(0,19) + ".json");
+                    writeStateToFile("connection/","after_data_received_reply_" + getFullPath().substr(0,19) + ".json");
                 } else {
                     EV_DEBUG << "not found" << std::endl;
                 }
@@ -314,7 +314,7 @@ namespace voting {
                     } else {
                         socket->send(createDataPacket("reject"));
                     }
-                    writeStateToFile("connection/peers_after_data_send_" + getFullPath().substr(0,19) + ".json");
+                    writeStateToFile("connection/", "after_data_send_" + getFullPath().substr(0,19) + ".json");
                 } catch(std::exception ex) {
                     EV_DEBUG << "Could not send" << std::endl;
                 }
@@ -345,7 +345,7 @@ namespace voting {
                 if(doesConnect){
                     sync_service.sendSyncReply(&socket_adapter);
                 }
-                writeStateToFile("sync/afterReturnReply."  + getFullPath().substr(0,19) + ".json");
+                writeStateToFile("sync/", "afterReturnReply."  + getFullPath().substr(0,19) + ".json");
             }
             break;
         }
@@ -357,10 +357,11 @@ namespace voting {
         nodes.insert(newNode);
     }
 
-    void VotingSetupApp::writeStateToFile(std::string file) {
+    void VotingSetupApp::writeStateToFile(std::string directory, std::string file) {
         //const std::filesystem::path &currentPath = std::filesystem::current_path();
         EV_DEBUG << "print: " << file << std::endl;
-        connection_service.exportPeersList("./results/", nodes, file);
+        connection_service.exportPeersList("./results/" + directory + "nodes/", nodes, file);
+        connection_service.exportPeerConnections("./results/" + directory + "connections/", connection_map, file);
     }
 
     void VotingSetupApp::listenStop() {

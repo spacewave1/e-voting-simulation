@@ -56,7 +56,7 @@ namespace voting {
         std::set<std::string>* getNodes();
         std::map<std::string, std::string>* getNodeConnections();
         void addNode(std::string newNode);
-        void writeStateToFile(std::string file);
+        void writeStateToFile(std::string directory, std::string file);
         void receiveIncomingMessages(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo);
         void listenStop();
         void setupSocket(inet::TcpSocket* socket, int port);
