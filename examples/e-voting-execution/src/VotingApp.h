@@ -40,6 +40,10 @@ namespace voting {
         inet::TcpSocket* publish_socket = new inet::TcpSocket();
         inet::TcpSocket* subscribe_socket = new inet::TcpSocket();
 
+        inet::TcpSocket* request_up_socket = new inet::TcpSocket();
+        inet::TcpSocket listen_socket;
+        inet::TcpSocket* request_down_socket = new inet::TcpSocket();
+
         std::string address_up, address_down = "";
         int publish_port, subscribe_port;
         std::vector<election> election_box;
@@ -47,6 +51,7 @@ namespace voting {
         size_t position = 0;
 
         std::string sendTowards = "";
+        std::string localAddress = "";
 
         omnetpp::cMsgPar *nextDirection;
         omnetpp::cMsgPar *received3PData;
@@ -56,7 +61,7 @@ namespace voting {
         std::map<std::string, std::string> connection_map;
         std::string nodesString;
 
-        int down_socket_id = 0;
+        int request_socket_id = 0;
 
         size_t current_hops = 0;
         std::string received_direction;
