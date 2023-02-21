@@ -25,6 +25,8 @@ namespace voting {
         inet::cMessage *hopsSelfMessage;
         inet::cMessage *directionSelfMessage;
         inet::cMessage *subscribeSelfMessage;
+        inet::cMessage *closePublishMessage;
+        inet::cMessage *closeSubscribeMessage;
         bool isReceiving = false;
         bool isInitializingDirectionDistribution = false;
         bool doesConnect = true;
@@ -64,7 +66,7 @@ namespace voting {
         int request_socket_id = 0;
 
         size_t current_hops = 0;
-        std::string received_direction;
+        std::string received_from_direction;
 
         inet::SocketMap socketMap;
 
@@ -87,6 +89,8 @@ namespace voting {
 
     private:
         std::string received_sync_request_from;
+
+        void printSocketMap();
     };
 }
 
