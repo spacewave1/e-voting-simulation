@@ -14,6 +14,7 @@
 #include "network/syncService.h"
 #include "../../../src/inetSocketAdapter.h"
 #include "evoting/distributionService.h"
+#include "evoting/tallyService.h"
 
 namespace voting {
     class VotingApp : public inet::TcpAppBase {
@@ -27,17 +28,26 @@ namespace voting {
         inet::cMessage *subscribeSelfMessage;
         inet::cMessage *closePublishMessage;
         inet::cMessage *closeSubscribeMessage;
+        inet::cMessage *tTallyAtMessage;
+        inet::cMessage *tConfirmAtMessage;
+        inet::cMessage *tRequestKeysAtMessage;
+        std::vector<inet::cMessage*> tKeyMessages;
+        std::vector<omnetpp::cMsgPar*> addressPars;
         bool isReceiving = false;
         bool isInitializingDirectionDistribution = false;
         bool doesConnect = true;
+
         connectionService connection_service;
         distributionService distribution_service;
+        hillEncryptionService hill_encryption_service;
+        tallyService* tally_service;
 
         inetSocketAdapter socket_up_adapter;
         inetSocketAdapter socket_down_adapter;
         inetSocketAdapter socket_no_direction_adapter;
         inetSocketAdapter subscribe_socket_adapter;
         inetSocketAdapter publish_socket_adapter;
+        inetSocketAdapter request_keys_socket;
 
         inet::TcpSocket* publish_socket = new inet::TcpSocket();
         inet::TcpSocket* subscribe_socket = new inet::TcpSocket();
@@ -46,14 +56,25 @@ namespace voting {
         inet::TcpSocket listen_socket;
         inet::TcpSocket* request_down_socket = new inet::TcpSocket();
 
+        inet::TcpSocket* request_key_socket = new inet::TcpSocket();
+
+        inet::TcpSocket reply_key_socket;
+
         std::string address_up, address_down = "";
         int publish_port, subscribe_port;
         std::vector<election> election_box;
 
+        // For tallying
+        std::map<size_t, std::queue<std::string>> election_keys_to_send;
+        std::map<size_t, std::string> onw_election_keys;
+        std::map<size_t, std::vector<std::string>> received_election_keys;
+
+        std::map<size_t, bool> is_evaluated_votes_map;
+
         size_t position = 0;
 
         std::string sendTowards = "";
-        std::string localAddress = "";
+        std::string local_address = "";
 
         omnetpp::cMsgPar *nextDirection;
         omnetpp::cMsgPar *received3PData;
@@ -62,6 +83,7 @@ namespace voting {
         std::set<std::string> nodes;
         std::map<std::string, std::string> connection_map;
         std::string nodesString;
+
 
         int request_socket_id = 0;
 
@@ -89,7 +111,7 @@ namespace voting {
 
     private:
         std::string received_sync_request_from;
-
+        void initElectionDistribution(election& election);
         void printSocketMap();
     };
 }

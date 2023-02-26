@@ -9,11 +9,12 @@ simple VotingApp like IApp
         int localPort = default(-1);  // local port
         bool active = default(true);
         bool isReceivingAtStart = default(false);
-        int threePDownPort = default(5049);
-        int threePUpPort = default(5051);
         double tPlaceVote @unit(s) = default(-2s);
         double tThreePReceive @unit(s) = default(1s);
         double tCreateElection @unit(s) = default(-1s);
+        double tTallyAt @unit(s) = default(-1s);
+        double tRequestKeys @unit(s) = default(-1s);
+        double tConfirmVoteAt @unit(s) = default(-1s);
         int timeToLive = default(-1); // if not -1, set the TTL (IPv4) or Hop Limit (IPv6) field of sent packets to this value
         int dscp = default(-1); // if not -1, set the DSCP (IPv4/IPv6) field of sent packets to this value
         int tos = default(-1); // if not -1, set the Type Of Service (IPv4) / Traffic Class (IPv6) field of sent packets to this value
