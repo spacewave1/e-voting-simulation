@@ -15,6 +15,7 @@
 #include "../../../src/inetSocketAdapter.h"
 #include "evoting/distributionService.h"
 #include "evoting/tallyService.h"
+#include "evoting/electionService.h"
 
 namespace voting {
     class VotingApp : public inet::TcpAppBase {
@@ -41,6 +42,7 @@ namespace voting {
         distributionService distribution_service;
         hillEncryptionService hill_encryption_service;
         tallyService* tally_service;
+        electionService* election_service;
 
         inetSocketAdapter socket_up_adapter;
         inetSocketAdapter socket_down_adapter;
@@ -66,7 +68,7 @@ namespace voting {
 
         // For tallying
         std::map<size_t, std::queue<std::string>> election_keys_to_send;
-        std::map<size_t, std::string> onw_election_keys;
+        std::map<size_t, std::string> own_election_keys;
         std::map<size_t, std::vector<std::string>> received_election_keys;
 
         std::map<size_t, bool> is_evaluated_votes_map;
