@@ -13,9 +13,9 @@
 #include "evoting/peer.h"
 #include "network/syncService.h"
 #include "../../../src/inetSocketAdapter.h"
-#include "evoting/distributionService.h"
-#include "evoting/tallyService.h"
-#include "evoting/electionService.h"
+#include "evoting/service/distributionService.h"
+#include "evoting/service/tallyService.h"
+#include "evoting/service/electionService.h"
 
 namespace voting {
     class VotingApp : public inet::TcpAppBase {

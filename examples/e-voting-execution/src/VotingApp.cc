@@ -8,7 +8,7 @@
 #include "inet/common/INETUtils.h"
 #include "inet/applications/common/SocketTag_m.h"
 #include "nlohmann/json.hpp"
-#include "evoting/electionBuilder.h"
+#include "evoting/model/electionBuilder.h"
 #include "../../../src/PacketsKind.h"
 
 namespace voting {
