@@ -22,7 +22,7 @@ public:
     void close() override;
     bool isBound() override;
     void setSocket(inet::TcpSocket* socket);
-    void recvAlt() override;
+    void listen() override;
     //void socketDataArrived(inet::TcpSocket *socket, inet::Packet *packet, bool urgent) override;
     void setParentComponent(inet::cComponent* component);
     void addProgrammedMessage(socketMessage message);

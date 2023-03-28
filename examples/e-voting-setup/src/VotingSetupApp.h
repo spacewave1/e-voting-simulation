@@ -19,26 +19,35 @@ namespace voting {
         inet::cMessage *connectSelfMessage;
         inet::cMessage *sendDataSelfMessage;
         inet::cMessage *listenStartMessage;
-        inet::cMessage *listenEndMessage;
+        inet::cMessage *closeSocketMessage;
         inet::cMessage *initSyncMessage;
         inet::cMessage *listenDownSyncMessage;
         inet::cMessage *listenUpSyncMessage;
         inet::cMessage *forwardUpSyncMessage;
         inet::cMessage *returnDownSyncMessage;
-        bool isReceiving = false;
-        bool doesConnect = true;
+        bool isReturning = false;
         connectionService connection_service;
         syncService sync_service;
         inetSocketAdapter socket_adapter;
+        std::string connectAddress;
+        std::string localAddress;
 
         // TODO: Migrate to use peer
         std::set<std::string> nodes;
         std::map<std::string, std::string> connection_map;
         std::string nodesString;
-        int down_connect_socket_id = 0;
-        int down_sync_socket_id = 0;
-        int up_sync_socket_id = 0;
 
+        float forwardRequestDelta = 0.1f;
+        float returnSyncRequestDelta = 0.5f;
+        float closeSyncForwardSocketDelta = 0.01f;
+        float connectionRequestReplyDelta = 0.01f;
+        float listenUpDelta = 0.01f;
+
+        inet::TcpSocket* downSyncSocket = new inet::TcpSocket();
+        inet::TcpSocket* upSyncSocket = new inet::TcpSocket();
+        inet::TcpSocket* listen_connection_socket = new inet::TcpSocket();
+        inet::TcpSocket* listen_sync_up_socket = new inet::TcpSocket();
+        inet::TcpSocket* listen_sync_down_socket = new inet::TcpSocket();
         inet::SocketMap socketMap;
 
         void handleTimer(inet::cMessage *msg) override;
@@ -53,20 +62,8 @@ namespace voting {
         void initialize(int stage) override;
 
     public:
-        std::set<std::string>* getNodes();
-        std::map<std::string, std::string>* getNodeConnections();
-        void addNode(std::string newNode);
         void writeStateToFile(std::string directory, std::string file);
-        void receiveIncomingMessages(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo);
-        void listenStop();
         void setupSocket(inet::TcpSocket* socket, int port);
-        void setPacketsSent(int newPacketsSent);
-        void setBytesSent(int newBytesSent);
-        int getBytesSent();
-        int getPacketsSent();
-        connectionService *getConnectionService();
-        syncService *getSyncService();
-        void setReceivedSyncRequestFrom(std::string requestFrom);
 
     private:
         std::string received_sync_request_from;

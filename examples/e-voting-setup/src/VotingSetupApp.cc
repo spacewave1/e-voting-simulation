@@ -36,35 +36,26 @@ namespace voting {
         double tOpen = par("tOpen").doubleValue();
         double tSend = par("tSend").doubleValue();
         double tListenStart = par("tListenStart").doubleValue();
-        double tListenEnd = par("tListenEnd").doubleValue();
         double tSyncInit = par("tSyncInit").doubleValue();
-        double tListenUpSync = par("tListenUpSync").doubleValue();
         double tListenDownSync = par("tListenDownSync").doubleValue();
-        double tForwardUpSync = par("tForwardUpSync").doubleValue();
-        double tReturnSyncDown = par("tReturnDownSync").doubleValue();
-        isReceiving = par("isReceivingAtStart").boolValue();
+        connectAddress = par("connectAddress").stringValue();
+        localAddress = par("localAddress").stringValue();
 
         if (inet::simTime() <= tOpen) {
             connectSelfMessage = new inet::cMessage("timer");
             connectSelfMessage->setKind(SELF_MSGKIND_CONNECT);
             scheduleAt(tOpen, connectSelfMessage);
-        } else {
-            doesConnect = false;
         }
         if (inet::simTime() <= tSend) {
             sendDataSelfMessage = new inet::cMessage("timer");
             sendDataSelfMessage->setKind(SELF_MSGKIND_SEND);
             scheduleAt(tSend, sendDataSelfMessage);
         }
+
         if (inet::simTime() <= tListenStart) {
             listenStartMessage = new inet::cMessage("timer");
             listenStartMessage->setKind(SELF_MSGKIND_LISTEN);
             scheduleAt(tListenStart, listenStartMessage);
-        }
-        if (inet::simTime() <= tListenEnd) {
-            listenEndMessage = new inet::cMessage("timer");
-            listenEndMessage->setKind(SELF_MSGKIND_LISTEN_END);
-            scheduleAt(tListenEnd, listenEndMessage);
         }
         if(inet::simTime() <= tSyncInit) {
             initSyncMessage = new inet::cMessage("timer");
@@ -76,60 +67,28 @@ namespace voting {
             listenDownSyncMessage->setKind(SELF_MSGKIND_LISTEN_SYNC_DOWN);
             scheduleAt(tListenDownSync, listenDownSyncMessage);
         }
-        if(inet::simTime() <= tListenUpSync) {
-            listenUpSyncMessage = new inet::cMessage("timer");
-            listenUpSyncMessage->setKind(SELF_MSGKIND_LISTEN_SYNC_UP);
-            scheduleAt(tListenUpSync, listenUpSyncMessage);
-        }
-        if(inet::simTime() <= tForwardUpSync) {
-            forwardUpSyncMessage = new inet::cMessage("timer");
-            forwardUpSyncMessage->setKind(SELF_MSGKIND_FORWARD_SYNC_UP);
-            scheduleAt(tForwardUpSync, forwardUpSyncMessage);
-        }
-        if(inet::simTime() <= tReturnSyncDown) {
-            returnDownSyncMessage = new inet::cMessage("timer");
-            returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
-            scheduleAt(tReturnSyncDown, returnDownSyncMessage);
-        }
     }
 
     void VotingSetupApp::handleTimer(inet::cMessage *msg) {
         if(msg->getKind() == SELF_MSGKIND_LISTEN) {
-            isReceiving = true;
-            socket.renewSocket();
+            listen_connection_socket->renewSocket();
             int localPort = par("localPort");
-            setupSocket(&socket, localPort);
-            socket_adapter.setSocket(&socket);
+            setupSocket(listen_connection_socket, localPort);
+            socket_adapter.setSocket(listen_connection_socket);
             connection_service.changeToListenState(socket_adapter);
-        }
-        // TODO: Destroy connection objects, once the socket is closed
-        if(msg->getKind() == SELF_MSGKIND_LISTEN_END) {
-            /*
-            isReceiving = false;
-            listenStop();
-            std::for_each(connectionSet.begin(), connectionSet.end(), [](VotingAppConnectionRequestReply * rrp){
-                rrp->deleteModule();
-            });
-            */
         }
         if(msg->getKind() == SELF_MSGKIND_CONNECT) {
             socket.renewSocket();
             int localPort = par("localPort");
             // parameters
-            std::string connectAddress{par("connectAddress").stringValue()};
             setupSocket(&socket, localPort);
 
             socket_adapter.setMsgKind(APP_CONN_REQUEST);
             socket_adapter.setSocket(&socket);
             socket_adapter.setParentComponent(this);
-            EV_DEBUG << connectAddress << std::endl;
-            connection_service.connect(socket_adapter,connectAddress,nodes, connection_map);
-            //connect();
+            connection_service.connect(socket_adapter,connectAddress);
         }
         if(msg->getKind() == SELF_MSGKIND_SEND) {
-            std::string connectAddress{par("connectAddress").stringValue()};
-            std::string localAddress{par("localAddress").stringValue()};
-
             socket_adapter.setMsgKind(APP_CONN_REQUEST);
             socket_adapter.setSocket(&socket);
             socket_adapter.setParentComponent(this);
@@ -139,18 +98,14 @@ namespace voting {
             bytesSent += socket_adapter.getBytesSent();
         }
         if(msg->getKind() == SELF_MSGKIND_CLOSE) {
-            //std::for_each(connectionSet.begin(), connectionSet.end(),[](VotingAppConnectionRequestReply* rr){
-                //rr->cancelAndDelete();
-            //});
             close();
         }
         if(msg->getKind() == SELF_MSGKIND_INIT_SYNC) {
-            const char *connectAddress = par("connectAddress");
-            socket.renewSocket();
             // parameters
-            int syncPort = par("syncForwardPort");
-            setupSocket(&socket, syncPort);
-            const inet::Ipv4Address &addr = inet::Ipv4Address(connectAddress);
+            setupSocket(upSyncSocket, 5556);
+            upSyncSocket->renewSocket();
+            socket_adapter.setSocket(upSyncSocket);
+            socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_REQUEST);
 
             sync_service.initSync(&socket_adapter, connectAddress);
@@ -160,50 +115,48 @@ namespace voting {
             bytesSent += socket_adapter.getBytesSent();
         }
         if(msg->getKind() == SELF_MSGKIND_LISTEN_SYNC_DOWN){
-            isReceiving = true;
-            socket.renewSocket();
+            listen_sync_down_socket->renewSocket();
 
-            int syncPort = par("syncForwardPort");
-            setupSocket(&socket, syncPort);
-            
-            socket_adapter.setSocket(&socket);
+            setupSocket(listen_sync_down_socket, 5556);
+            socket_adapter.setSocket(listen_sync_down_socket);
             connection_service.changeToListenState(socket_adapter);
         }
         if(msg->getKind() == SELF_MSGKIND_LISTEN_SYNC_UP){
-            isReceiving = true;
-            socket.renewSocket();
+            listen_sync_up_socket->renewSocket();
 
-            int syncPort = par("syncReturnPort");
-            setupSocket(&socket, syncPort);
+            setupSocket(listen_sync_up_socket, 5557);
 
-            socket_adapter.setSocket(&socket);
+            socket_adapter.setSocket(listen_sync_up_socket);
             connection_service.changeToListenState(socket_adapter);
         }
         if(msg->getKind() == SELF_MSGKIND_FORWARD_SYNC_UP){
-            isReceiving = false;
-            socket.renewSocket();
-            int syncPort = par("syncForwardPort");
-            setupSocket(&socket, syncPort);
+            upSyncSocket->renewSocket();
+            setupSocket(upSyncSocket, 5556);
+            socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_REQUEST);
-            socket_adapter.setSocket(&socket);
-            const char *connectAddress = par("connectAddress");
-            sync_service.forwardConnectSync(&socket_adapter, connectAddress);
+            socket_adapter.setSocket(upSyncSocket);
+
+            sync_service.forwardConnectSync(&socket_adapter, connectAddress, 5556);
             sync_service.forwardSyncRequestUp(&socket_adapter, nodes, connection_map, connectAddress, received_sync_request_from);
             packetsSent += 1;
             bytesSent += socket_adapter.getBytesSent();
         }
         if(msg->getKind() == SELF_MSGKIND_RETURN_SYNC_DOWN){
-            isReceiving = false;
-            int syncPort = par("syncReturnPort");
-            socket.renewSocket();
-            setupSocket(&socket, syncPort);
-            socket_adapter.setMsgKind(APP_SYNC_RETURN);
-            socket_adapter.setSocket(&socket);
+            isReturning = true;
+            downSyncSocket->renewSocket();
+            setupSocket(downSyncSocket, 5557);
             socket_adapter.setParentComponent(this);
-            const std::string &address = socket.getLocalAddress().str();
-            sync_service.returnSyncRequestDown(&socket_adapter, nodes, connection_map, address);
+            socket_adapter.setMsgKind(APP_SYNC_RETURN);
+            socket_adapter.setSocket(downSyncSocket);
+            sync_service.returnSyncRequestDown(&socket_adapter, nodes, connection_map, localAddress);
+            sync_service.returnSyncRequestDownSendData(&socket_adapter, nodes, connection_map, localAddress);
             packetsSent += 1;
             bytesSent += socket_adapter.getBytesSent();
+        }
+        if(msg->getKind() == SELF_MSGKIND_CLOSE_SYNC_SOCKET){
+            socket_adapter.setSocket(upSyncSocket);
+            socket_adapter.setParentComponent(this);
+            socket_adapter.close();
         }
     }
 
@@ -216,7 +169,6 @@ namespace voting {
     }
 
     void VotingSetupApp::socketEstablished(inet::TcpSocket *socket) {
-        EV_DEBUG << "socket established" << std::endl;
         TcpAppBase::socketEstablished(socket);;
     }
 
@@ -225,54 +177,76 @@ namespace voting {
             handleTimer(msg);
         } else if (socket.belongsToSocket(msg)) {
             socket.processMessage(msg);
-        } else {
+        } else if (listen_connection_socket->belongsToSocket(msg)) {
+            listen_connection_socket->processMessage(msg);
+        } else if (listen_sync_up_socket->belongsToSocket(msg)) {
+            listen_sync_up_socket->processMessage(msg);
+        } else if (listen_sync_down_socket->belongsToSocket(msg)) {
+            listen_sync_down_socket->processMessage(msg);
+        } else if (upSyncSocket->belongsToSocket(msg)) {
+            upSyncSocket->processMessage(msg);
+        } else if (downSyncSocket->belongsToSocket(msg)) {
+            downSyncSocket->processMessage(msg);
+        }
+        //else if(socketMap.findSocketFor(msg)){
+        //    socketMap.findSocketFor(msg)->processMessage(msg);
+        //}
+        else {
             try {
-                if(inet::check_and_cast<inet::Packet*>(msg)){
-                    socketDataArrived(&socket, inet::check_and_cast<inet::Packet*>(msg), false);
+                    inet::Packet *pPacket = inet::check_and_cast<inet::Packet *>(msg);
+                    socketDataArrived(inet::check_and_cast<inet::TcpSocket *>(socketMap.findSocketFor(msg)), pPacket,
+                                      false);
+                    return;
+                } catch (std::exception &ex) {
+                    EV_DEBUG << "cannot cast to packet" << std::endl;
+                    EV_DEBUG << ex.what() << std::endl;
                 }
-            } catch (std::exception& ex){
-                EV_DEBUG << "caught exception" << std::endl;
+            try {
+                inet::TcpCommand *pCommand = inet::check_and_cast<inet::TcpCommand *>(msg->getControlInfo());
+                inet::TcpCommandCode code = static_cast<inet::TcpCommandCode>(msg->getKind());
+                EV_DEBUG << code << std::endl;
+            } catch (std::exception &ex) {
+                EV_DEBUG << "cannot cast to command" << std::endl;
                 EV_DEBUG << ex.what() << std::endl;
             }
-        }
+            }
         //else
         //     throw inet::cRuntimeError("Unknown incoming message: '%s'", msg->getName());
     }
 
     void VotingSetupApp::socketStatusArrived(inet::TcpSocket *socket, inet::TcpStatusInfo *status) {
-        EV_DEBUG << "status arrived" << std::endl;
         TcpAppBase::socketStatusArrived(socket, status);
     }
 
     void VotingSetupApp::socketAvailable(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo) {
-        if(isReceiving) {
-            auto newSocket = new inet::TcpSocket(availableInfo); // create socket using received info
+        auto newSocket = new inet::TcpSocket(availableInfo); // create socket using received info
+
+        if(availableInfo->getLocalPort() == 5555) {
+            socket->setOutputGate(gate("socketOut"));
+            socket->accept(availableInfo->getNewSocketId());
             socketMap.addSocket(newSocket); // store accepted connection
-
-            if(availableInfo->getRemotePort() == 5555){
-                down_connect_socket_id = newSocket->getSocketId();
-            } else if(availableInfo->getRemotePort() == 5556){
-                down_sync_socket_id = newSocket->getSocketId();
-                received_sync_request_from = availableInfo->getRemoteAddr().str();
-            } else if(availableInfo->getRemotePort() == 5557) {
-                up_sync_socket_id = newSocket->getSocketId();
-            } else {
-
-            }
-
-            this->socket.accept(availableInfo->getNewSocketId());
-
-            //receiveIncomingMessages(socket, availableInfo);
-            //auto newSocket = new inet::TcpSocket(availableInfo);
-        } else {
-            TcpAppBase::socketAvailable(socket, availableInfo);
+        } else if(availableInfo->getLocalPort() == 5556 && std::equal(connectAddress.begin(), connectAddress.end(), availableInfo->getRemoteAddr().str().begin())) {
+            upSyncSocket->setOutputGate(gate("socketOut"));
+            upSyncSocket->accept(availableInfo->getNewSocketId());
+            socketMap.addSocket(newSocket); // store accepted connection
+        } else if(availableInfo->getLocalPort() == 5556 && !std::equal(connectAddress.begin(), connectAddress.end(), availableInfo->getRemoteAddr().str().begin())) {
+            downSyncSocket->setOutputGate(gate("socketOut"));
+            downSyncSocket->accept(availableInfo->getNewSocketId());
+            socketMap.addSocket(newSocket); // store accepted connection
+        } else if(availableInfo->getLocalPort() == 5557 && std::equal(connectAddress.begin(), connectAddress.end(), availableInfo->getRemoteAddr().str().begin())) {
+            upSyncSocket->setOutputGate(gate("socketOut"));
+            upSyncSocket->accept(availableInfo->getNewSocketId());
+            socketMap.addSocket(newSocket); // store accepted connection
+        } else if(availableInfo->getLocalPort() == 5557 && !std::equal(connectAddress.begin(), connectAddress.end(), availableInfo->getRemoteAddr().str().begin())) {
+            downSyncSocket->setOutputGate(gate("socketOut"));
+            downSyncSocket->accept(availableInfo->getNewSocketId());
+            socketMap.addSocket(newSocket); // store accepted connection
         }
     }
 
     void VotingSetupApp::socketDataArrived(inet::TcpSocket *socket, inet::Packet *msg, bool urgent) {
         const inet::Ptr<const inet::BytesChunk> &intrusivePtr = msg->peekData<inet::BytesChunk>();
         uint8_t appMsgKind = intrusivePtr->getByte(0);
-        EV_DEBUG << "Message kind arrived: " << std::to_string(appMsgKind) << std::endl;
 
         const inet::Ptr<const inet::BytesChunk> &ptr = msg->peekData<inet::BytesChunk>();
 
@@ -280,15 +254,14 @@ namespace voting {
         std::transform(ptr->getBytes().begin() + 1,ptr->getBytes().end(),std::back_inserter(content_str),[](uint8_t d){
             return (char) d;
         });
-        EV_DEBUG << content_str << std::endl;
 
         switch(appMsgKind){
             case APP_CONN_REPLY: {
                 if(content_str.find("accept") != std::string::npos){
-                    std::string connectAddress{par("connectAddress").stringValue()};
-                    std::string localAddress{par("localAddress").stringValue()};
-
-                    connection_service.computeConnectionReply(socketMessage{std::string(content_str), connectAddress}, nodes, connection_map, localAddress);
+                    socket_adapter.setSocket(socket);
+                    socket_adapter.addProgrammedMessage(socketMessage{std::string(content_str),connectAddress});
+                    connection_service.computeConnectionReply(socket_adapter,  nodes, connection_map, localAddress);
+                    socket_adapter.close();
                     writeStateToFile("connection/","after_data_received_reply_" + getFullPath().substr(0,19) + ".json");
                 } else {
                     EV_DEBUG << "not found" << std::endl;
@@ -297,21 +270,19 @@ namespace voting {
                 break;
             case APP_CONN_REQUEST:
             {
-                auto *down_connect_socket = inet::check_and_cast<inet::TcpSocket *>(socketMap.getSocketById(down_connect_socket_id));
                 try{
-                    socket_adapter.setSocket(down_connect_socket);
-                    socket_adapter.addProgrammedMessage(socketMessage{content_str, down_connect_socket->getRemoteAddress().str()});
+                    socket_adapter.setSocket(socket);
+                    socket_adapter.addProgrammedMessage(socketMessage{content_str, socket->getRemoteAddress().str()});
 
-                    if(connection_service.receiveConnectionRequest(socket_adapter, content_str, nodes, connection_map, down_connect_socket->getLocalAddress().str()) == 0){
-                        socket->setState(inet::TcpSocket::CONNECTED);
-
-                        down_connect_socket->setOutputGate(gate("socketOut"));
-                        socket_adapter.setSocket(down_connect_socket);
+                    if(connection_service.receiveConnectionRequest(socket_adapter, content_str, nodes, connection_map, downSyncSocket->getLocalAddress().str()) == 0){
+                        socket->setOutputGate(gate("socketOut"));
+                        socket_adapter.setSocket(socket);
                         socket_adapter.setMsgKind(APP_CONN_REPLY);
                         socket_adapter.setParentComponent(this);
 
                         connection_service.sendConnectionResponse(socket_adapter, "accept");
                     } else {
+                        EV_DEBUG << "send reject" << std::endl;
                         socket->send(createDataPacket("reject"));
                     }
                     writeStateToFile("connection/", "after_data_send_" + getFullPath().substr(0,19) + ".json");
@@ -321,31 +292,54 @@ namespace voting {
             }
             break;
             case APP_SYNC_REQUEST: {
-                auto *down_sync_socket = inet::check_and_cast<inet::TcpSocket *>(socketMap.getSocketById(down_sync_socket_id));
-                socket->setState(inet::TcpSocket::CONNECTED);
-                down_sync_socket->setOutputGate(gate("socketOut"));
-                socket_adapter.setSocket(down_sync_socket);
-
+                socket->setOutputGate(gate("socketOut"));
+                socket_adapter.setSocket(socket);
                 socket_adapter.addProgrammedMessage(socketMessage{content_str,socket->getRemoteAddress().str()});
                 sync_service.receiveSyncRequest(socket_adapter,nodes, connection_map);
                 socket_adapter.setMsgKind(APP_SYNC_REPLY);
-                if(doesConnect){
-                    sync_service.sendSyncReply(&socket_adapter);
+
+                received_sync_request_from = socket->getRemoteAddress().str();
+
+                sync_service.sendSyncReply(&socket_adapter);
+
+                if(!connectAddress.empty()) {
+                    forwardUpSyncMessage = new inet::cMessage("timer");
+                    forwardUpSyncMessage->setKind(SELF_MSGKIND_FORWARD_SYNC_UP);
+                    scheduleAt(inet::simTime() + forwardRequestDelta, forwardUpSyncMessage);
+                } else {
+                    returnDownSyncMessage = new inet::cMessage("timer");
+                    returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
+                    scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
                 }
             }
             break;
             case APP_SYNC_RETURN:
             {
-                auto *up_sync_socket = inet::check_and_cast<inet::TcpSocket *>(socketMap.getSocketById(up_sync_socket_id));
-                up_sync_socket->setOutputGate(gate("socketOut"));
-                socket_adapter.setSocket(up_sync_socket);
+                socket->setOutputGate(gate("socketOut"));
+                socket_adapter.setSocket(socket);
                 socket_adapter.addProgrammedMessage(socketMessage{content_str,socket->getRemoteAddress().str()});
                 sync_service.receiveSyncRequest(socket_adapter,nodes, connection_map);
                 socket_adapter.setMsgKind(APP_SYNC_REPLY);
-                if(doesConnect){
-                    sync_service.sendSyncReply(&socket_adapter);
-                }
+                socket_adapter.setParentComponent(this);
+                sync_service.sendSyncReply(&socket_adapter);
+
+                returnDownSyncMessage = new inet::cMessage("timer");
+                returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
+                scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
+
                 writeStateToFile("sync/", "afterReturnReply."  + getFullPath().substr(0,19) + ".json");
+            }
+            break;
+            case APP_SYNC_REPLY:
+            {
+                if(!isReturning) {
+                    closeSocketMessage = new inet::cMessage("timer");
+                    closeSocketMessage->setKind(SELF_MSGKIND_CLOSE_SYNC_SOCKET);
+                    scheduleAt(inet::simTime(), closeSocketMessage);
+                    listenUpSyncMessage = new inet::cMessage("timer");
+                    listenUpSyncMessage->setKind(SELF_MSGKIND_LISTEN_SYNC_UP);
+                    scheduleAt(inet::simTime() + listenUpDelta, listenUpSyncMessage);
+                }
             }
             break;
         }
@@ -353,47 +347,19 @@ namespace voting {
         TcpAppBase::socketDataArrived(socket, msg, urgent);
     }
 
-    void VotingSetupApp::addNode(std::string newNode) {
-        nodes.insert(newNode);
-    }
-
     void VotingSetupApp::writeStateToFile(std::string directory, std::string file) {
         //const std::filesystem::path &currentPath = std::filesystem::current_path();
-        EV_DEBUG << "print: " << file << std::endl;
         connection_service.exportPeersList("./results/" + directory + "nodes/", nodes, file);
         connection_service.exportPeerConnections("./results/" + directory + "connections/", connection_map, file);
     }
 
-    void VotingSetupApp::listenStop() {
-        EV_DEBUG << "stopped listening on " << this->getFullPath() << std::endl;
-        socket.renewSocket();
-    }
-
     void VotingSetupApp::setupSocket(inet::TcpSocket* socket, int port) {
-        const char *localAddress = par("localAddress");
-        socket->bind(inet::Ipv4Address(localAddress), port);
+        socket->bind(inet::Ipv4Address(localAddress.c_str()), port);
         socket->setCallback(this);
         socket->setOutputGate(gate("socketOut"));
     }
 
-    int VotingSetupApp::getPacketsSent() {
-        return packetsSent;
-    }
-
-    int VotingSetupApp::getBytesSent() {
-        return bytesSent;
-    }
-
-    void VotingSetupApp::setPacketsSent(int newPacketsSent) {
-        packetsSent = newPacketsSent;
-    }
-
-    void VotingSetupApp::setBytesSent(int newBytesSend) {
-        packetsSent = newBytesSend;
-    }
-
     inet::Packet* VotingSetupApp::createDataPacket(std::string send_string) {
-        EV_DEBUG << "create data" << std::endl;
         inet::Ptr<inet::Chunk> payload;
         inet::Packet *packet = new inet::Packet("data");
 
@@ -413,7 +379,6 @@ namespace voting {
         byteCountData->setBytes(appData);
 
         packet->insertAtFront(byteCountData);
-        EV_DEBUG << "return packet" << std::endl;
         return packet;
     }
 }

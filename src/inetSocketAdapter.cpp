@@ -33,7 +33,7 @@ void inetSocketAdapter::send(std::string payload) {
     socket->send(sendOutPacket);
 }
 
-void inetSocketAdapter::recvAlt() {
+void inetSocketAdapter::listen() {
     socket->listen();
 }
 
