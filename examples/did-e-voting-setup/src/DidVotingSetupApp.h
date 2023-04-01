@@ -20,7 +20,6 @@
 namespace voting {
     class DidVotingSetupApp : public inet::TcpAppBase {
         inet::cMessage *connectSelfMessage;
-        inet::cMessage *sendDataSelfMessage;
         inet::cMessage *listenStartMessage;
         inet::cMessage *closeSocketMessage;
         inet::cMessage *listenUpSyncMessage;
@@ -28,6 +27,7 @@ namespace voting {
         inet::cMessage *listenDownSyncMessage;
         inet::cMessage *forwardUpSyncMessage;
         inet::cMessage *returnDownSyncMessage;
+        inet::cMessage *connectionReplyMessage;
         didConnectionService connection_service;
         didSyncService sync_service;
         inetSocketAdapter socket_adapter;

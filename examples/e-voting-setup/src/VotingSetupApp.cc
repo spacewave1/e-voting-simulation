@@ -36,23 +36,16 @@ namespace voting {
         writeStateToFile("connection/", "at_start_" + this->getFullPath().substr(0,19) + ".json");
 
         // Schedule events
-        double tOpen = par("tOpen").doubleValue();
-        double tSend = par("tSend").doubleValue();
+        double tConnect = par("tConnect").doubleValue();
         double tListenStart = par("tListenStart").doubleValue();
         double tSyncInit = par("tSyncInit").doubleValue();
         double tListenDownSync = par("tListenDownSync").doubleValue();
 
-        if (inet::simTime() <= tOpen) {
+        if (inet::simTime() <= tConnect) {
             connectSelfMessage = new inet::cMessage("timer");
-            connectSelfMessage->setKind(SELF_MSGKIND_CONNECT);
-            scheduleAt(tOpen, connectSelfMessage);
+            connectSelfMessage->setKind(SELF_MSGKIND_CONNECT_REQUEST);
+            scheduleAt(tConnect, connectSelfMessage);
         }
-        if (inet::simTime() <= tSend) {
-            sendDataSelfMessage = new inet::cMessage("timer");
-            sendDataSelfMessage->setKind(SELF_MSGKIND_SEND);
-            scheduleAt(tSend, sendDataSelfMessage);
-        }
-
         if (inet::simTime() <= tListenStart) {
             listenStartMessage = new inet::cMessage("timer");
             listenStartMessage->setKind(SELF_MSGKIND_LISTEN);
@@ -78,7 +71,7 @@ namespace voting {
             socket_adapter.setSocket(listen_connection_socket);
             connection_service.changeToListenState(socket_adapter);
         }
-        if(msg->getKind() == SELF_MSGKIND_CONNECT) {
+        if(msg->getKind() == SELF_MSGKIND_CONNECT_REQUEST) {
             socket.renewSocket();
             int localPort = par("localPort");
             // parameters
@@ -88,15 +81,22 @@ namespace voting {
             socket_adapter.setSocket(&socket);
             socket_adapter.setParentComponent(this);
             connection_service.connect(socket_adapter,connectAddress);
-        }
-        if(msg->getKind() == SELF_MSGKIND_SEND) {
-            socket_adapter.setMsgKind(APP_CONN_REQUEST);
-            socket_adapter.setSocket(&socket);
-            socket_adapter.setParentComponent(this);
             connection_service.sendConnectionRequest(socket_adapter, connectAddress);
 
             packetsSent += 1;
             bytesSent += socket_adapter.getBytesSent();
+        }
+        if(msg->getKind() == SELF_MSGKIND_CONNECT_REPLY) {
+            omnetpp::cMsgPar &msgPar = msg->par("socketId");
+            long socketId = msgPar.longValue();
+            inet::ISocket *pSocket = socketMap.getSocketById(socketId);
+            auto *pTcpSocket = dynamic_cast<inet::TcpSocket *>(pSocket);
+            pTcpSocket->setOutputGate(gate("socketOut"));
+
+            socket_adapter.setMsgKind(APP_CONN_REPLY);
+            socket_adapter.setSocket(pTcpSocket);
+            socket_adapter.setParentComponent(this);
+            connection_service.sendConnectionResponse(socket_adapter, "accept");
         }
         if(msg->getKind() == SELF_MSGKIND_CLOSE) {
             close();
@@ -276,12 +276,13 @@ namespace voting {
                     socket_adapter.addProgrammedMessage(socketMessage{content_str, socket->getRemoteAddress().str()});
 
                     if(connection_service.receiveConnectionRequest(socket_adapter, content_str, nodes, connection_map, downSyncSocket->getLocalAddress().str()) == 0){
-                        socket->setOutputGate(gate("socketOut"));
-                        socket_adapter.setSocket(socket);
-                        socket_adapter.setMsgKind(APP_CONN_REPLY);
-                        socket_adapter.setParentComponent(this);
+                        connectionReplyMessage = new inet::cMessage("timer");
+                        auto *socketIdPar = new omnetpp::cMsgPar("socketId");
+                        socketIdPar->setLongValue(socket->getSocketId());
+                        connectionReplyMessage->addPar(socketIdPar);
+                        connectionReplyMessage->setKind(SELF_MSGKIND_CONNECT_REPLY);
+                        scheduleAt(inet::simTime() + connectionRequestReplyDelta, connectionReplyMessage);
 
-                        connection_service.sendConnectionResponse(socket_adapter, "accept");
                     } else {
                         EV_DEBUG << "send reject" << std::endl;
                         socket->send(createDataPacket("reject"));
