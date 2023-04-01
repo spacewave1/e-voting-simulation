@@ -27,6 +27,14 @@ void inetSocketAdapter::send(std::string payload) {
     dataChunk->setBytes(vec);
 
     sendOutPacket->insertAtBack(dataChunk);
+    if(isMultiPackageData) {
+        const auto exit_sequence_chunk = inet::makeShared<inet::BytesChunk>();
+        exit_sequence_chunk->setBytes(exit_sequence);
+
+        sendOutPacket->insertAtBack(exit_sequence_chunk);
+        isMultiPackageData = false;
+    }
+
     sendOutPacket->insertAtFront(byteCountData);
 
     parentComponent->emit(inet::packetSentSignal, sendOutPacket);
@@ -105,4 +113,8 @@ void inetSocketAdapter::setupSocket(std::string localAddress, size_t port) {
     auto* tcpApp = reinterpret_cast<inet::TcpAppBase*>(parentComponent);
     socket->setCallback(tcpApp);
     socket->setOutputGate(tcpApp->gate("socketOut"));
+}
+
+void inetSocketAdapter::setIsMultiPackageData(bool newValue) {
+    this->isMultiPackageData = newValue;
 }

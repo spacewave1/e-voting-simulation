@@ -37,8 +37,13 @@ namespace voting {
         std::set<std::string> nodes;
         inMemoryStorage storage;
         std::string nodesString;
+        std::stringstream message_stream;
 
         bool isReturning = false;
+
+        bool isReceivingMultipackageMessage = false;
+        bool hasReceivedLastPackageFromMultiMessage = false;
+        uint8_t saved_package_type = 0;
 
         float forwardRequestDelta = 0.1f;
         float returnSyncRequestDelta = 0.5f;

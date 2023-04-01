@@ -29,6 +29,7 @@ public:
     void setMsgKind(uint8_t msgKind);
     int getBytesSent() const;
     void setupSocket(std::string localAddress, size_t port) override;
+    void setIsMultiPackageData(bool newValue);
 
 private:
     inet::Packet* sendOutPacket;
@@ -38,6 +39,8 @@ private:
     uint8_t msg_kind;
     logger _logger = logger::Instance();
     long bytesSent = 0;
+    bool isMultiPackageData = false;
+    std::vector<u_int8_t> exit_sequence = { '#', '#', '#', '#'};
 
 };
 

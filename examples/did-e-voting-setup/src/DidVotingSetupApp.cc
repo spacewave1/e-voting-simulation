@@ -111,13 +111,12 @@ namespace voting {
             close();
         }
         if(msg->getKind() == SELF_MSGKIND_INIT_SYNC) {
-            EV_DEBUG << "now send sync" << std::endl;
             upSyncSocket->renewSocket();
             setupSocket(upSyncSocket, 5556);
             socket_adapter.setSocket(upSyncSocket);
             socket_adapter.setMsgKind(APP_SYNC_REQUEST);
             socket_adapter.setParentComponent(this);
-            EV_DEBUG << "connect to " << connect_did << std::endl;
+            socket_adapter.setIsMultiPackageData(true);
             storage.fetchResource(connect_did);
 
             sync_service.initSync(&socket_adapter, connect_did, storage);
@@ -146,7 +145,7 @@ namespace voting {
             socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_REQUEST);
             socket_adapter.setSocket(upSyncSocket);
-
+            socket_adapter.setIsMultiPackageData(true);
             sync_service.forwardConnectSync(&socket_adapter, connect_did, storage);
             sync_service.forwardSyncRequestUp(&socket_adapter, storage, connect_did, received_sync_request_from);
             packetsSent += 1;
@@ -155,12 +154,19 @@ namespace voting {
         if(msg->getKind() == SELF_MSGKIND_RETURN_SYNC_DOWN){
             isReturning = true;
             downSyncSocket->renewSocket();
-            setupSocket(&socket, 5556);
+            setupSocket(downSyncSocket, 5557);
             socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_RETURN);
             socket_adapter.setSocket(downSyncSocket);
+            socket_adapter.setIsMultiPackageData(true);
+
+            writeStateToFile("connection/","before_return_" + getFullPath().substr(0,19) + ".json");
+            EV_DEBUG << "now connect return" << std::endl;
             sync_service.returnSyncRequestDown(&socket_adapter, nodes, storage, local_did);
+            EV_DEBUG << "now send data return" << std::endl;
             sync_service.returnSyncRequestDownData(&socket_adapter, nodes, storage, local_did);
+            EV_DEBUG << "has send data" << std::endl;
+
             packetsSent += 1;
             bytesSent += socket_adapter.getBytesSent();
         }
@@ -247,10 +253,12 @@ namespace voting {
             downSyncSocket->accept(availableInfo->getNewSocketId());
             socketMap.addSocket(newSocket); // store accepted connection
         } else if(availableInfo->getLocalPort() == 5557 && std::equal(connect_address.begin(), connect_address.end(), availableInfo->getRemoteAddr().str().begin())) {
+            EV_DEBUG << "available on upsyncsocket 5557" << std::endl;
             upSyncSocket->setOutputGate(gate("socketOut"));
             upSyncSocket->accept(availableInfo->getNewSocketId());
             socketMap.addSocket(newSocket); // store accepted connection
         } else if(availableInfo->getLocalPort() == 5557 && !std::equal(connect_address.begin(), connect_address.end(), availableInfo->getRemoteAddr().str().begin())) {
+            EV_DEBUG << "available on downsyncsocket 5557" << std::endl;
             downSyncSocket->setOutputGate(gate("socketOut"));
             downSyncSocket->accept(availableInfo->getNewSocketId());
             socketMap.addSocket(newSocket); // store accepted connection
@@ -258,19 +266,44 @@ namespace voting {
     }
 
     void DidVotingSetupApp::socketDataArrived(inet::TcpSocket *socket, inet::Packet *msg, bool urgent) {
+        EV_DEBUG << "socket data arrived" << std::endl;
         const inet::Ptr<const inet::BytesChunk> &intrusivePtr = msg->peekData<inet::BytesChunk>();
         uint8_t appMsgKind = intrusivePtr->getByte(0);
-
         const inet::Ptr<const inet::BytesChunk> &ptr = msg->peekData<inet::BytesChunk>();
+        int offset = 1;
+
+        // TODO: Logik in service verlagern
+        if(isReceivingMultipackageMessage){
+            EV_DEBUG << "is receiving multi package" << std::endl;
+            appMsgKind = saved_package_type;
+            offset = 0;
+        }
 
         std::string content_str;
-        std::transform(ptr->getBytes().begin() + 1,ptr->getBytes().end(),std::back_inserter(content_str),[](uint8_t d){
+        std::transform(ptr->getBytes().begin() + offset,ptr->getBytes().end(),std::back_inserter(content_str),[](uint8_t d){
             return (char) d;
         });
 
+        if(isReceivingMultipackageMessage){
+            int count = 0;
+            std::for_each(ptr->getBytes().rbegin(), ptr->getBytes().rbegin() + 5,[&count](char c){
+               if(c == '#') {
+                   count++;
+               };
+            });
+            EV_DEBUG << "count: " << count << std::endl;
+            if(count > 3){
+                EV_DEBUG << "found exit sequence" << std::endl;
+                content_str = "";
+                std::transform(ptr->getBytes().begin() + offset,ptr->getBytes().end() - count,std::back_inserter(content_str),[](uint8_t d){
+                    return (char) d;
+                });
+                hasReceivedLastPackageFromMultiMessage = true;
+            }
+        }
+
         switch(appMsgKind){
             case APP_CONN_REPLY: {
-                EV_DEBUG << content_str << std::endl;
                 if(did::validateDID(content_str)){
                     socket_adapter.setSocket(socket);
                     socket_adapter.addProgrammedMessage(socketMessage{std::string(content_str),connect_address});
@@ -278,7 +311,6 @@ namespace voting {
                     connection_service.computeConnectionReply(socket_adapter,storage, local_did);
                     socket_adapter.close();
                     connect_did = did(content_str);
-                    EV_DEBUG << "added " << content_str << " to peers" << std::endl;
                     writeStateToFile("connection/","after_data_received_reply_" + getFullPath().substr(0,19) + ".json");
                 } else {
                     EV_DEBUG << "not found" << std::endl;
@@ -310,42 +342,78 @@ namespace voting {
             }
             break;
             case APP_SYNC_REQUEST: {
-                socket->setOutputGate(gate("socketOut"));
-                socket_adapter.setSocket(socket);
-                socket_adapter.addProgrammedMessage(socketMessage{content_str,socket->getRemoteAddress().str()});
-                sync_service.receiveSyncRequest(socket_adapter,storage);
-                socket_adapter.setMsgKind(APP_SYNC_REPLY);
+                EV_DEBUG << "received sync request" << std::endl;
+                if(!isReceivingMultipackageMessage && !hasReceivedLastPackageFromMultiMessage) {
+                    isReceivingMultipackageMessage = true;
+                    saved_package_type = APP_SYNC_REQUEST;
+                    message_stream << content_str;
+                } else if(isReceivingMultipackageMessage && hasReceivedLastPackageFromMultiMessage) {
+                    message_stream << content_str;
+                    socket->setOutputGate(gate("socketOut"));
+                    socket_adapter.setSocket(socket);
+                    EV_DEBUG << message_stream.str() << std::endl;
+                    socket_adapter.addProgrammedMessage(socketMessage{message_stream.str(),socket->getRemoteAddress().str()});
+                    sync_service.receiveSyncRequest(socket_adapter,storage);
+                    socket_adapter.setMsgKind(APP_SYNC_REPLY);
+                    received_sync_request_from = socket->getRemoteAddress().str();
+                    sync_service.sendSyncReply(&socket_adapter);
+                    isReceivingMultipackageMessage = false;
+                    hasReceivedLastPackageFromMultiMessage = false;
+                    message_stream.str(std::string());
 
-                received_sync_request_from = socket->getRemoteAddress().str();
-
-                sync_service.sendSyncReply(&socket_adapter);
-
-                if(!connect_address.empty()) {
-                    forwardUpSyncMessage = new inet::cMessage("timer");
-                    forwardUpSyncMessage->setKind(SELF_MSGKIND_FORWARD_SYNC_UP);
-                    scheduleAt(inet::simTime() + forwardRequestDelta, forwardUpSyncMessage);
-                } else {
-                    returnDownSyncMessage = new inet::cMessage("timer");
-                    returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
-                    scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
+                    if(!connect_address.empty()) {
+                        forwardUpSyncMessage = new inet::cMessage("timer");
+                        forwardUpSyncMessage->setKind(SELF_MSGKIND_FORWARD_SYNC_UP);
+                        scheduleAt(inet::simTime() + forwardRequestDelta, forwardUpSyncMessage);
+                    } else {
+                        EV_DEBUG << "now return" << std::endl;
+                        returnDownSyncMessage = new inet::cMessage("timer");
+                        returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
+                        scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
+                    }
+                } else if(isReceivingMultipackageMessage && !hasReceivedLastPackageFromMultiMessage){
+                    EV_DEBUG << "package in the middle" << std::endl;
+                    message_stream << content_str;
                 }
             }
             break;
             case APP_SYNC_RETURN:
             {
-                socket->setOutputGate(gate("socketOut"));
-                socket_adapter.setSocket(socket);
-                socket_adapter.addProgrammedMessage(socketMessage{content_str,socket->getRemoteAddress().str()});
-                sync_service.receiveSyncRequest(socket_adapter,storage);
-                socket_adapter.setMsgKind(APP_SYNC_REPLY);
-                socket_adapter.setParentComponent(this);
-                sync_service.sendSyncReply(&socket_adapter);
+                if(!isReceivingMultipackageMessage && !hasReceivedLastPackageFromMultiMessage) {
+                    EV_DEBUG << "received initial package" << std::endl;
+                    isReceivingMultipackageMessage = true;
+                    hasReceivedLastPackageFromMultiMessage = false;
+                    saved_package_type = APP_SYNC_RETURN;
+                    EV_DEBUG << "message stream" << message_stream.str() << std::endl;
+                    message_stream << content_str;
+                } else if(isReceivingMultipackageMessage && hasReceivedLastPackageFromMultiMessage) {
+                    message_stream << content_str;
+                    socket->setOutputGate(gate("socketOut"));
+                    EV_DEBUG << "now save from return" << std::endl;
+                    EV_DEBUG << message_stream.str() << std::endl;
+                    socket_adapter.setSocket(socket);
+                    socket_adapter.addProgrammedMessage(socketMessage{message_stream.str(),socket->getRemoteAddress().str()});
+                    sync_service.receiveSyncRequest(socket_adapter,storage);
+                    socket_adapter.setMsgKind(APP_SYNC_REPLY);
+                    socket_adapter.setParentComponent(this);
+                    sync_service.sendSyncReply(&socket_adapter);
 
-                returnDownSyncMessage = new inet::cMessage("timer");
-                returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
-                scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
+                    isReceivingMultipackageMessage = false;
+                    hasReceivedLastPackageFromMultiMessage = false;
+                    message_stream.str(std::string());
 
-                writeStateToFile("sync/", "afterReturnReply."  + getFullPath().substr(0,19) + ".json");
+
+                    if(storage.hasIdDown(local_did)) {
+                        returnDownSyncMessage = new inet::cMessage("timer");
+                        returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
+                        scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
+                    }
+
+                    writeStateToFile("sync/", "afterReturnReply."  + getFullPath().substr(0,19) + ".json");
+                } else if(isReceivingMultipackageMessage && !hasReceivedLastPackageFromMultiMessage){
+                    EV_DEBUG << "package in the middle" << std::endl;
+                    message_stream << content_str;
+                }
             }
             break;
             case APP_SYNC_REPLY:
