@@ -35,7 +35,7 @@ namespace voting {
 
         // TODO: Migrate to use peer
         std::set<std::string> nodes;
-        inMemoryStorage storage;
+        inMemoryStorage storage{};
         std::string nodesString;
         std::stringstream message_stream;
 

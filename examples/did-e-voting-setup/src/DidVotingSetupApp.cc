@@ -33,6 +33,7 @@ namespace voting {
 
             std::time_t today_time = std::chrono::system_clock::to_time_t(p1);
             local_did = identity_service.createLocalDid(today_time, local_address, "abcs");
+            storage.addResource(local_did, local_address);
         }
     }
 
@@ -161,12 +162,8 @@ namespace voting {
             socket_adapter.setSocket(downSyncSocket);
             socket_adapter.setIsMultiPackageData(true);
 
-            writeStateToFile("connection/","before_return_" + getFullPath().substr(0,19) + ".json");
-            EV_DEBUG << "now connect return" << std::endl;
             sync_service.returnSyncRequestDown(&socket_adapter, nodes, storage, local_did);
-            EV_DEBUG << "now send data return" << std::endl;
             sync_service.returnSyncRequestDownData(&socket_adapter, nodes, storage, local_did);
-            EV_DEBUG << "has send data" << std::endl;
 
             packetsSent += 1;
             bytesSent += socket_adapter.getBytesSent();
@@ -321,7 +318,7 @@ namespace voting {
             case APP_CONN_REQUEST:
             {
                 EV_DEBUG << "received connection request" << std::endl;
-                try{
+                try {
                     socket_adapter.setSocket(socket);
                     socket_adapter.addProgrammedMessage(socketMessage{content_str, socket->getRemoteAddress().str()});
 
@@ -367,13 +364,12 @@ namespace voting {
                         forwardUpSyncMessage->setKind(SELF_MSGKIND_FORWARD_SYNC_UP);
                         scheduleAt(inet::simTime() + forwardRequestDelta, forwardUpSyncMessage);
                     } else {
-                        EV_DEBUG << "now return" << std::endl;
+                        writeStateToFile("sync/", "end."  + getFullPath().substr(0,19) + ".json");
                         returnDownSyncMessage = new inet::cMessage("timer");
                         returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
                         scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
                     }
                 } else if(isReceivingMultipackageMessage && !hasReceivedLastPackageFromMultiMessage){
-                    EV_DEBUG << "package in the middle" << std::endl;
                     message_stream << content_str;
                 }
             }
@@ -381,17 +377,13 @@ namespace voting {
             case APP_SYNC_RETURN:
             {
                 if(!isReceivingMultipackageMessage && !hasReceivedLastPackageFromMultiMessage) {
-                    EV_DEBUG << "received initial package" << std::endl;
                     isReceivingMultipackageMessage = true;
                     hasReceivedLastPackageFromMultiMessage = false;
                     saved_package_type = APP_SYNC_RETURN;
-                    EV_DEBUG << "message stream" << message_stream.str() << std::endl;
                     message_stream << content_str;
                 } else if(isReceivingMultipackageMessage && hasReceivedLastPackageFromMultiMessage) {
                     message_stream << content_str;
                     socket->setOutputGate(gate("socketOut"));
-                    EV_DEBUG << "now save from return" << std::endl;
-                    EV_DEBUG << message_stream.str() << std::endl;
                     socket_adapter.setSocket(socket);
                     socket_adapter.addProgrammedMessage(socketMessage{message_stream.str(),socket->getRemoteAddress().str()});
                     sync_service.receiveSyncRequest(socket_adapter,storage);
@@ -409,10 +401,10 @@ namespace voting {
                         returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
                         scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
                     }
+                    // Writes all except highest node
+                    writeStateToFile("sync/", "end."  + getFullPath().substr(0,19) + ".json");
 
-                    writeStateToFile("sync/", "afterReturnReply."  + getFullPath().substr(0,19) + ".json");
                 } else if(isReceivingMultipackageMessage && !hasReceivedLastPackageFromMultiMessage){
-                    EV_DEBUG << "package in the middle" << std::endl;
                     message_stream << content_str;
                 }
             }
@@ -438,7 +430,8 @@ namespace voting {
         //const std::filesystem::path &currentPath = std::filesystem::current_path();
         EV_DEBUG << "print: " << file << std::endl;
         //connection_service.exportPeersList("./results/" + directory + "nodes/", nodes, file);
-        connection_service.exportDidRegistry("./results/" + directory + "connections/", storage, file);
+        connection_service.exportDidRegistry("./results/" + directory + "registry/", storage, file);
+        connection_service.exportDidResources("./results/" + directory + "resources/", storage, file);
     }
 
     void DidVotingSetupApp::setupSocket(inet::TcpSocket* socket, int port) {
