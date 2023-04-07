@@ -28,6 +28,8 @@ namespace voting {
 
             connectAddress = par("connectAddress").stringValue();
             localAddress = par("localAddress").stringValue();
+
+            socket_adapter.setParentComponent(this);
         }
     }
 
@@ -79,7 +81,6 @@ namespace voting {
 
             socket_adapter.setMsgKind(APP_CONN_REQUEST);
             socket_adapter.setSocket(&socket);
-            socket_adapter.setParentComponent(this);
             connection_service.connect(socket_adapter,connectAddress);
             connection_service.sendConnectionRequest(socket_adapter, connectAddress);
 
@@ -95,7 +96,6 @@ namespace voting {
 
             socket_adapter.setMsgKind(APP_CONN_REPLY);
             socket_adapter.setSocket(pTcpSocket);
-            socket_adapter.setParentComponent(this);
             connection_service.sendConnectionResponse(socket_adapter, "accept");
         }
         if(msg->getKind() == SELF_MSGKIND_CLOSE) {
@@ -106,7 +106,6 @@ namespace voting {
             setupSocket(upSyncSocket, 5556);
             upSyncSocket->renewSocket();
             socket_adapter.setSocket(upSyncSocket);
-            socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_REQUEST);
 
             sync_service.initSync(&socket_adapter, connectAddress);
@@ -133,7 +132,6 @@ namespace voting {
         if(msg->getKind() == SELF_MSGKIND_FORWARD_SYNC_UP){
             upSyncSocket->renewSocket();
             setupSocket(upSyncSocket, 5556);
-            socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_REQUEST);
             socket_adapter.setSocket(upSyncSocket);
 
@@ -146,7 +144,6 @@ namespace voting {
             isReturning = true;
             downSyncSocket->renewSocket();
             setupSocket(downSyncSocket, 5557);
-            socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_RETURN);
             socket_adapter.setSocket(downSyncSocket);
             sync_service.returnSyncRequestDown(&socket_adapter, nodes, connection_map, localAddress);
@@ -156,7 +153,6 @@ namespace voting {
         }
         if(msg->getKind() == SELF_MSGKIND_CLOSE_SYNC_SOCKET){
             socket_adapter.setSocket(upSyncSocket);
-            socket_adapter.setParentComponent(this);
             socket_adapter.close();
         }
     }
@@ -322,7 +318,6 @@ namespace voting {
                 socket_adapter.addProgrammedMessage(socketMessage{content_str,socket->getRemoteAddress().str()});
                 sync_service.receiveSyncRequest(socket_adapter,nodes, connection_map);
                 socket_adapter.setMsgKind(APP_SYNC_REPLY);
-                socket_adapter.setParentComponent(this);
                 sync_service.sendSyncReply(&socket_adapter);
 
                 returnDownSyncMessage = new inet::cMessage("timer");

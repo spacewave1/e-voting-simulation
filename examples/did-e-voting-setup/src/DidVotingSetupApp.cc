@@ -34,6 +34,8 @@ namespace voting {
             std::time_t today_time = std::chrono::system_clock::to_time_t(p1);
             local_did = identity_service.createLocalDid(today_time, local_address, "abcs");
             storage.addResource(local_did, local_address);
+
+            socket_adapter.setParentComponent(this);
         }
     }
 
@@ -85,7 +87,6 @@ namespace voting {
 
             socket_adapter.setMsgKind(APP_CONN_REQUEST);
             socket_adapter.setSocket(&socket);
-            socket_adapter.setParentComponent(this);
             connection_service.connect(socket_adapter,connect_address);
 
             std::stringstream local_did_stream;
@@ -105,7 +106,6 @@ namespace voting {
 
             socket_adapter.setMsgKind(APP_CONN_REPLY);
             socket_adapter.setSocket(pTcpSocket);
-            socket_adapter.setParentComponent(this);
             connection_service.sendConnectionSuccess(socket_adapter, local_did);
         }
         if(msg->getKind() == SELF_MSGKIND_CLOSE) {
@@ -116,7 +116,6 @@ namespace voting {
             setupSocket(upSyncSocket, 5556);
             socket_adapter.setSocket(upSyncSocket);
             socket_adapter.setMsgKind(APP_SYNC_REQUEST);
-            socket_adapter.setParentComponent(this);
             socket_adapter.setIsMultiPackageData(true);
             storage.fetchResource(connect_did);
 
@@ -143,7 +142,6 @@ namespace voting {
         if(msg->getKind() == SELF_MSGKIND_FORWARD_SYNC_UP){
             upSyncSocket->renewSocket();
             setupSocket(upSyncSocket, 5556);
-            socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_REQUEST);
             socket_adapter.setSocket(upSyncSocket);
             socket_adapter.setIsMultiPackageData(true);
@@ -156,7 +154,6 @@ namespace voting {
             isReturning = true;
             downSyncSocket->renewSocket();
             setupSocket(downSyncSocket, 5557);
-            socket_adapter.setParentComponent(this);
             socket_adapter.setMsgKind(APP_SYNC_RETURN);
             socket_adapter.setSocket(downSyncSocket);
             socket_adapter.setIsMultiPackageData(true);
@@ -170,7 +167,6 @@ namespace voting {
         }
         if(msg->getKind() == SELF_MSGKIND_CLOSE_SYNC_SOCKET){
             socket_adapter.setSocket(upSyncSocket);
-            socket_adapter.setParentComponent(this);
             socket_adapter.close();
         }
     }
@@ -388,7 +384,6 @@ namespace voting {
                     socket_adapter.addProgrammedMessage(socketMessage{message_stream.str(),socket->getRemoteAddress().str()});
                     sync_service.receiveSyncRequest(socket_adapter,storage);
                     socket_adapter.setMsgKind(APP_SYNC_REPLY);
-                    socket_adapter.setParentComponent(this);
                     sync_service.sendSyncReply(&socket_adapter);
 
                     isReceivingMultipackageMessage = false;

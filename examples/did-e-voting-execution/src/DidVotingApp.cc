@@ -15,9 +15,6 @@ namespace voting {
     Define_Module(DidVotingApp);
 
     void DidVotingApp::initialize(int stage) {
-        //tally_service = new tallyService(hill_encryption_service);
-        //election_service = new electionService(hill_encryption_service);
-
         ApplicationBase::initialize(stage);
 
         if (stage == inet::INITSTAGE_LOCAL) {
@@ -47,6 +44,18 @@ namespace voting {
             own_id = local_ids[0];
             position = distribution_service.calculatePosition(storage, own_id);
             distribution_service.getDistributionParams(storage, own_id, address_up, address_down);
+
+            socket_up_adapter.setParentComponent(this);
+            socket_down_adapter.setParentComponent(this);
+            request_keys_socket.setParentComponent(this);
+            socket_no_direction_adapter.setParentComponent(this);
+            publish_socket_adapter.setParentComponent(this);
+            subscribe_socket_adapter.setParentComponent(this);
+
+            socket_up_adapter.setSocket(request_up_socket);
+            socket_down_adapter.setSocket(request_down_socket);
+            request_keys_socket.setSocket(request_key_socket);
+            publish_socket_adapter.setSocket(publish_socket);
         }
     }
 
@@ -101,16 +110,9 @@ namespace voting {
         publish_port = 5050;
         subscribe_port = 5051;
 
-        if (!address_up.empty()) {
-            socket_up_adapter.setSocket(request_up_socket);
-            socket_up_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
-            socket_up_adapter.setParentComponent(this);
-        }
-        if (!address_down.empty()) {
-            socket_down_adapter.setSocket(request_down_socket);
-            socket_down_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
-            socket_down_adapter.setParentComponent(this);
-        }
+        socket_up_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
+        socket_down_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
+
         distribution_service.sendInitialPortsSetupRequest(socket_up_adapter, socket_down_adapter,
                                                           local_address, position, address_up, address_down);
     }
@@ -165,7 +167,6 @@ namespace voting {
             EV_DEBUG << "send election id to request key" << std::endl;
             std::string request_address = msg->par("request_address").stringValue();
             request_keys_socket.setSocket(request_key_socket);
-            request_keys_socket.setParentComponent(this);
             request_keys_socket.setupSocket(local_address, 50061);
             request_keys_socket.setMsgKind(APP_REQUEST_KEY);
             tally_service->requestKey(request_keys_socket, election_box[0], local_address, request_address);
@@ -217,13 +218,11 @@ namespace voting {
 
             // Setup reply key listen
             socket_no_direction_adapter.setSocket(&reply_key_socket);
-            socket_no_direction_adapter.setParentComponent(this);
             socket_no_direction_adapter.setupSocket(local_address, 50061);
             socket_no_direction_adapter.listen();
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_PORTS_SETUP_RECEIVE) {
             isReceiving = true;
-            socket_no_direction_adapter.setParentComponent(this);
             socket_no_direction_adapter.setSocket(&listen_socket);
             socket_no_direction_adapter.setupSocket(local_address, 5049);
             socket_no_direction_adapter.listen();
@@ -231,17 +230,13 @@ namespace voting {
         if (msg->getKind() == SELF_MSGKIND_DISTR_HOPS_SEND) {
             std::string direction = nextDirection->stringValue();
             if (direction.find("up") != std::string::npos) {
-                socket_up_adapter.setSocket(request_up_socket);
                 socket_up_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_HOPS_REQUEST);
-                socket_up_adapter.setParentComponent(this);
                 if (request_up_socket->getState() != inet::TcpSocket::CONNECTED) {
                     socket_up_adapter.connect("tcp", address_up, 5049);
                 }
                 distribution_service.sendDirectionRequestNumberOfHops(socket_up_adapter, current_hops);
             } else if (direction.find("down") != std::string::npos) {
-                socket_down_adapter.setSocket(request_down_socket);
                 socket_down_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_HOPS_REQUEST);
-                socket_down_adapter.setParentComponent(this);
                 if (request_down_socket->getState() != inet::TcpSocket::CONNECTED) {
                     socket_down_adapter.connect("tcp", address_down, 5049);
                 }
@@ -262,18 +257,14 @@ namespace voting {
             if (!address_up.empty() && originPosition > position) {
                 EV_DEBUG << "forward ports setup up" << std::endl;
                 request_up_socket->renewSocket();
-                socket_up_adapter.setSocket(request_up_socket);
                 socket_up_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
-                socket_up_adapter.setParentComponent(this);
                 socket_up_adapter.setupSocket(local_address, 5049);
                 socket_up_adapter.connect("tcp", address_up, 5049);
                 distribution_service.sendDirectionRequest(socket_up_adapter, data, position, address_down, address_up);
             } else if (!address_down.empty() && originPosition < position) {
                 EV_DEBUG << "forward ports setup down" << std::endl;
                 request_down_socket->renewSocket();
-                socket_down_adapter.setSocket(request_down_socket);
                 socket_down_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
-                socket_down_adapter.setParentComponent(this);
                 socket_down_adapter.setupSocket(local_address, 5049);
                 socket_down_adapter.connect("tcp", address_down, 5049);
                 distribution_service.sendDirectionRequest(socket_down_adapter, data, position, address_down, address_up);
@@ -281,14 +272,10 @@ namespace voting {
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_INITIAL_DIRECTION_SEND) {
             if (!address_up.empty()) {
-                socket_up_adapter.setSocket(request_up_socket);
-                socket_up_adapter.setParentComponent(this);
                 socket_up_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST);
             }
 
             if (!address_down.empty()) {
-                socket_down_adapter.setSocket(request_down_socket);
-                socket_down_adapter.setParentComponent(this);
                 socket_down_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST);
             }
 
@@ -302,7 +289,6 @@ namespace voting {
         if (msg->getKind() == SELF_MSGKIND_DISTR_SUBSCRIBE) {
             isReceiving = true;
             subscribe_socket->renewSocket();
-            socket_no_direction_adapter.setParentComponent(this);
             socket_no_direction_adapter.setSocket(subscribe_socket);
             socket_no_direction_adapter.setupSocket(local_address, subscribe_port);
             if (subscribe_socket->getState() != inet::TcpSocket::LISTENING) {
@@ -318,8 +304,6 @@ namespace voting {
             printSocketMap();
 
             if (direction.find("up") != -1) {
-                socket_up_adapter.setSocket(request_up_socket);
-                socket_up_adapter.setParentComponent(this);
                 socket_up_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST);
                 if (request_up_socket->getState() == inet::TcpSocket::CONNECTED) {
                 } else {
@@ -335,8 +319,6 @@ namespace voting {
 
             if (direction.find("down") != -1) {
                 EV_DEBUG << "state is: " << inet::TcpSocket::stateName(request_down_socket->getState()) << std::endl;
-                socket_down_adapter.setSocket(request_down_socket);
-                socket_down_adapter.setParentComponent(this);
                 socket_down_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST);
                 if (request_down_socket->getState() == inet::TcpSocket::CONNECTED) {
                 } else {
@@ -359,23 +341,14 @@ namespace voting {
             //publish_socket->setTCPAlgorithmClass("TcpNoCongestionControl");
             printSocketMap();
 
+            publish_socket_adapter.setMsgKind(APP_DISTR_PUBLISH);
+            publish_socket_adapter.setupSocket(local_address, publish_port);
             if (sendTowards =="up") {
-                socket_up_adapter.setParentComponent(this);
-                socket_up_adapter.setSocket(publish_socket);
-                socket_up_adapter.setupSocket(local_address, publish_port);
-                socket_up_adapter.setMsgKind(APP_DISTR_PUBLISH);
-                socket_up_adapter.connect("tcp", address_up, publish_port);
-                //publish_socket->connect(inet::Ipv4Address(address_up.c_str()), publish_port);
-                distribution_service.sendElection(socket_up_adapter, election_box[0], publish_port);
+                publish_socket_adapter.connect("tcp", address_up, publish_port);
             } else if (sendTowards =="down") {
-                socket_down_adapter.setParentComponent(this);
-                socket_down_adapter.setMsgKind(APP_DISTR_PUBLISH);
-                socket_down_adapter.setSocket(publish_socket);
-                socket_down_adapter.setupSocket(local_address, publish_port);
-                socket_down_adapter.connect("tcp", address_down, publish_port);
-                //publish_socket->connect(inet::Ipv4Address(address_down.c_str()), publish_port);
-                distribution_service.sendElection(socket_down_adapter, election_box[0], publish_port);
+                publish_socket_adapter.connect("tcp", address_down, publish_port);
             }
+            distribution_service.sendElection(publish_socket_adapter, election_box[0], publish_port);
             closePublishMessage = new inet::cMessage();
             closePublishMessage->setKind(SELF_MSGKIND_CLOSE_PUBLISH_SOCKET);
             scheduleAt(inet::simTime() + 0.1, closePublishMessage);
@@ -383,7 +356,6 @@ namespace voting {
         }
         if (msg->getKind() == SELF_MSGKIND_CLOSE_SUBSCRIBE_SOCKET) {
             subscribe_socket_adapter.setSocket(subscribe_socket);
-            subscribe_socket_adapter.setParentComponent(this);
 
             try {
                 printSocketMap();
@@ -394,8 +366,6 @@ namespace voting {
             }
         }
         if (msg->getKind() == SELF_MSGKIND_CLOSE_PUBLISH_SOCKET) {
-            publish_socket_adapter.setSocket(publish_socket);
-            publish_socket_adapter.setParentComponent(this);
             printSocketMap();
             try {
                 publish_socket_adapter.close();
@@ -545,7 +515,6 @@ namespace voting {
                 socket->setOutputGate(gate("socketOut"));
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_RESPONSE);
-                socket_no_direction_adapter.setParentComponent(this);
                 EV_DEBUG << "send success" << std::endl;
                 distribution_service.sendSuccessResponse(socket_no_direction_adapter);
 
@@ -600,7 +569,6 @@ namespace voting {
                 received_from_direction = distribution_service.invertDirection(content_str);
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_RESPONSE);
-                socket_no_direction_adapter.setParentComponent(this);
                 socket->setOutputGate(gate("socketOut"));
                 distribution_service.sendSuccessResponse(socket_no_direction_adapter);
                 EV_DEBUG << "now close " << std::endl;
@@ -620,7 +588,6 @@ namespace voting {
 
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_HOPS_RESPONSE);
-                socket_no_direction_adapter.setParentComponent(this);
                 socket->setOutputGate(gate("socketOut"));
                 distribution_service.sendSuccessResponse(socket_no_direction_adapter);
                 socket_no_direction_adapter.close();
@@ -706,7 +673,6 @@ namespace voting {
 
                 std::queue<std::string> &queue = election_keys_to_send[election_id];
                 socket_no_direction_adapter.setMsgKind(APP_RESPONSE_KEY);
-                socket_no_direction_adapter.setParentComponent(this);
                 socket->setOutputGate(gate("socketOut"));
                 tally_service->keyResponse(socket_no_direction_adapter, election_id, &election_keys_to_send);
 
@@ -715,7 +681,6 @@ namespace voting {
             case APP_RESPONSE_KEY: {
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_RESPONSE_KEY_CLOSE);
-                socket_no_direction_adapter.setParentComponent(this);
                 socket_no_direction_adapter.addProgrammedMessage(socketMessage{content_str, socket->getRemoteAddress().str()});
                 tally_service->receiveKey(socket_no_direction_adapter, election_box[0].getId(), received_election_keys);
             }
