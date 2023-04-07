@@ -49,7 +49,6 @@ namespace voting {
                 address_down = reversed_connection_map[local_address];
             }
             position = distribution_service.calculatePosition(connection_map, local_address);
-
             distribution_service.getDistributionParams(connection_map, local_address, address_up, address_down);
         }
     }
@@ -349,11 +348,6 @@ namespace voting {
 
             distribution_service.sendForwardistributionRequestDirection(&socket_up_adapter,
                                                                         &socket_down_adapter,
-                                                                        address_up,
-                                                                        address_down,
-                                                                        current_hops,
-                                                                        nodes.size(),
-                                                                        position,
                                                                         direction);
 
         }

@@ -86,8 +86,7 @@ namespace voting {
             socket_adapter.setMsgKind(APP_CONN_REQUEST);
             socket_adapter.setSocket(&socket);
             socket_adapter.setParentComponent(this);
-            connection_service.connect(socket_adapter,connect_address,nodes, storage);
-            socket_adapter.setParentComponent(this);
+            connection_service.connect(socket_adapter,connect_address);
 
             std::stringstream local_did_stream;
             local_did_stream << local_did;
@@ -161,9 +160,10 @@ namespace voting {
             socket_adapter.setMsgKind(APP_SYNC_RETURN);
             socket_adapter.setSocket(downSyncSocket);
             socket_adapter.setIsMultiPackageData(true);
-
-            sync_service.returnSyncRequestDown(&socket_adapter, nodes, storage, local_did);
-            sync_service.returnSyncRequestDownData(&socket_adapter, nodes, storage, local_did);
+            EV_DEBUG << "before sync request down" << std::endl;
+            sync_service.returnSyncRequestDown(&socket_adapter,  storage, local_did);
+            sync_service.returnSyncRequestDownData(&socket_adapter,  storage, local_did);
+            EV_DEBUG << "after sync request down" << std::endl;
 
             packetsSent += 1;
             bytesSent += socket_adapter.getBytesSent();
@@ -305,7 +305,6 @@ namespace voting {
                 if(did::validateDID(content_str)){
                     socket_adapter.setSocket(socket);
                     socket_adapter.addProgrammedMessage(socketMessage{std::string(content_str),connect_address});
-                    std::set<did> addresses = storage.getAllDIDs();
                     connection_service.computeConnectionReply(socket_adapter,storage, local_did);
                     socket_adapter.close();
                     connect_did = did(content_str);
@@ -364,6 +363,7 @@ namespace voting {
                         forwardUpSyncMessage->setKind(SELF_MSGKIND_FORWARD_SYNC_UP);
                         scheduleAt(inet::simTime() + forwardRequestDelta, forwardUpSyncMessage);
                     } else {
+                        EV_DEBUG << "schedule return" << std::endl;
                         writeStateToFile("sync/", "end."  + getFullPath().substr(0,19) + ".json");
                         returnDownSyncMessage = new inet::cMessage("timer");
                         returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
@@ -394,7 +394,6 @@ namespace voting {
                     isReceivingMultipackageMessage = false;
                     hasReceivedLastPackageFromMultiMessage = false;
                     message_stream.str(std::string());
-
 
                     if(storage.hasIdDown(local_did)) {
                         returnDownSyncMessage = new inet::cMessage("timer");

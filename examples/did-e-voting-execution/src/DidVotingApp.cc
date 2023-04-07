@@ -44,30 +44,9 @@ namespace voting {
             hashService hash_service;
 
             const std::vector<did> &local_ids = storage.findAddressMatch(hash_service.hashMessage(local_address));
-            EV_DEBUG << "number of address matches: " << local_ids.size() << std::endl;
             own_id = local_ids[0];
-            EV_DEBUG << own_id << std::endl;
-            const didDocument &document = storage.getDocument(own_id);
-            EV_DEBUG << document << std::endl;
-/*
-            EV_DEBUG << document.controller << std::endl;
-            if (!document.controller.empty() && storage.existsResource(document.controller)) {
-                address_up = storage.fetchResource(document.controller);
-                EV_DEBUG << "has address up" << std::endl;
-                EV_DEBUG << address_up << std::endl;
-            } else {
-                EV_DEBUG << "no address up" << std::endl;
-            }
-
-            did id_down = storage.getDIDChainDown()[own_id];
-            if (!id_down.empty()) {
-                EV_DEBUG << "has address down" << std::endl;
-                address_down = storage.fetchResource(id_down);
-            }
             position = distribution_service.calculatePosition(storage, own_id);
-
             distribution_service.getDistributionParams(storage, own_id, address_up, address_down);
-             */
         }
     }
 
@@ -77,15 +56,14 @@ namespace voting {
 
 
         // Schedule events
-        //double tCreateElection = par("tCreateElection").doubleValue();
-        //double tPlaceVote = par("tPlaceVote").doubleValue();
-        //double tReceive3PRequest = par("tThreePReceive").doubleValue();
-        //double tConfirmVoteAt = par("tConfirmVoteAt").doubleValue();
-        //double tRequestKeysAt = par("tRequestKeys").doubleValue();
-        //double tTallyAt = par("tTallyAt").doubleValue();
+        double tCreateElection = par("tCreateElection").doubleValue();
+        double tPlaceVote = par("tPlaceVote").doubleValue();
+        double tReceive3PRequest = par("tThreePReceive").doubleValue();
+        double tConfirmVoteAt = par("tConfirmVoteAt").doubleValue();
+        double tRequestKeysAt = par("tRequestKeys").doubleValue();
+        double tTallyAt = par("tTallyAt").doubleValue();
         //EV_DEBUG << "place vote on: " << tPlaceVote << std::endl;
 
-        /*
         if (inet::simTime() <= tCreateElection) {
             createElectionSelfMessage = new inet::cMessage("timer");
             createElectionSelfMessage->setKind(SELF_MSGKIND_CREATE_ELECTION);
@@ -116,7 +94,6 @@ namespace voting {
             tTallyAtMessage->setKind(SELF_MSGKIND_TALLY);
             scheduleAt(tTallyAt, tTallyAtMessage);
         }
-         */
     }
 
     void DidVotingApp::initElectionDistribution(election& election) {
@@ -272,6 +249,7 @@ namespace voting {
             }
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_PORTS_SETUP_FORWARD) {
+            EV_DEBUG << "forward ports setup" << std::endl;
             isReceiving = false;
             inet::cMsgPar contentPar = msg->par("content");
             std::string content_str = contentPar.stringValue();
@@ -282,6 +260,7 @@ namespace voting {
             size_t originPosition = std::stoi(data["originPosition"].dump());
 
             if (!address_up.empty() && originPosition > position) {
+                EV_DEBUG << "forward ports setup up" << std::endl;
                 request_up_socket->renewSocket();
                 socket_up_adapter.setSocket(request_up_socket);
                 socket_up_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
@@ -290,6 +269,7 @@ namespace voting {
                 socket_up_adapter.connect("tcp", address_up, 5049);
                 distribution_service.sendDirectionRequest(socket_up_adapter, data, position, address_down, address_up);
             } else if (!address_down.empty() && originPosition < position) {
+                EV_DEBUG << "forward ports setup down" << std::endl;
                 request_down_socket->renewSocket();
                 socket_down_adapter.setSocket(request_down_socket);
                 socket_down_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
@@ -561,10 +541,12 @@ namespace voting {
 
         switch (appMsgKind) {
             case APP_DISTR_PORTS_SETUP_REQUEST: {
+                EV_DEBUG << "receied ports setup request" << std::endl;
                 socket->setOutputGate(gate("socketOut"));
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_RESPONSE);
                 socket_no_direction_adapter.setParentComponent(this);
+                EV_DEBUG << "send success" << std::endl;
                 distribution_service.sendSuccessResponse(socket_no_direction_adapter);
 
                 nlohmann::json setup_info = nlohmann::json::parse(content_str);
@@ -580,6 +562,7 @@ namespace voting {
             }
                 break;
             case APP_DISTR_PORTS_SETUP_RESPONSE: {
+                EV_DEBUG << "receied ports setup response" << std::endl;
                 if (content_str.find("accept") != -1) {
 
                     socket_no_direction_adapter.setSocket(socket);
@@ -613,6 +596,7 @@ namespace voting {
                 break;
             }
             case APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST: {
+                EV_DEBUG << "pre publish request" << std::endl;
                 received_from_direction = distribution_service.invertDirection(content_str);
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_RESPONSE);
@@ -623,6 +607,7 @@ namespace voting {
             }
                 break;
             case APP_DISTR_PRE_PUBLISH_DIRECTION_RESPONSE: {
+                EV_DEBUG << "pre publish response" << std::endl;
                 hopsSelfMessage = new inet::cMessage("timer");
                 hopsSelfMessage->setKind(SELF_MSGKIND_DISTR_HOPS_SEND);
                 scheduleAt(inet::simTime() + 0.1, hopsSelfMessage);
