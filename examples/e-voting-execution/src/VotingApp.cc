@@ -581,7 +581,6 @@ namespace voting {
             }
                 break;
             case APP_DISTR_PRE_PUBLISH_HOPS_RESPONSE: {
-
                 this->socket_no_direction_adapter.setSocket(socket);
                 this->socket_no_direction_adapter.close();
 
@@ -593,7 +592,6 @@ namespace voting {
             }
                 break;
             case APP_DISTR_PUBLISH: {
-
                 char vt = 11;
                 std::stringstream test(content_str);
                 std::string segment;

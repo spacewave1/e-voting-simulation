@@ -33,6 +33,8 @@ namespace voting {
         inet::cMessage *tTallyAtMessage;
         inet::cMessage *tConfirmAtMessage;
         inet::cMessage *tRequestKeysAtMessage;
+        inet::cMessage *tInitPortsUp;
+        inet::cMessage *tInitPortsDown;
         std::vector<inet::cMessage*> tKeyMessages;
         std::vector<omnetpp::cMsgPar*> addressPars;
         bool isReceiving = false;
@@ -45,6 +47,15 @@ namespace voting {
         hillEncryptionService hill_encryption_service{};
         tallyService* tally_service;
         electionService* election_service;
+        hashService hash_service{};
+
+
+        // Multipackage
+        bool is_receiving_multipackage_message = false;
+        bool has_received_last_package_from_multi_message = false;
+        uint8_t saved_package_type = 0;
+        uint8_t last_received_package_type = 0;
+        std::stringstream message_stream;
 
         inetSocketAdapter socket_up_adapter;
         inetSocketAdapter socket_down_adapter;
@@ -95,8 +106,12 @@ namespace voting {
 
         inet::SocketMap socketMap;
 
-        double pauseBeforePublish = 0.0;
-        double pauseBeforeForwardPortsRequest = 0.0;
+        double pauseBeforePublish = 0.1;
+        double pauseBeforeSendHops = 0.0;
+        double pause_before_close_publish = 0.1;
+        double pause_before_send_initial_direction = 0.0;
+        double pauseBeforeForwardPortsRequest = 0.1;
+        double pause_before_send_direction_forward = 0.2;
 
         void handleTimer(inet::cMessage *msg) override;
         void handleCrashOperation(inet::LifecycleOperation *) override;
@@ -113,7 +128,6 @@ namespace voting {
         void writeStateToFile(std::string file);
 
     private:
-        std::string received_sync_request_from;
         void initElectionDistribution(election& election);
         void printSocketMap();
     };
