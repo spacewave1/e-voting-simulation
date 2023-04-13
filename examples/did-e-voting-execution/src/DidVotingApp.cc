@@ -2,7 +2,7 @@
 // Created by wld on 27.11.22.
 //
 
-#include "VotingApp.h"
+#include "DidVotingApp.h"
 #include <algorithm>
 #include "inet/transportlayer/tcp/Tcp.h"
 #include "inet/common/INETUtils.h"
@@ -12,12 +12,12 @@
 #include "../../../src/PacketsKind.h"
 
 namespace voting {
-    Define_Module(VotingApp);
+    Define_Module(DidVotingApp);
 
-    void VotingApp::initialize(int stage) {
+    void DidVotingApp::initialize(int stage) {
+        hashService hash_service;
         tally_service = new tallyService(hill_encryption_service);
         election_service = new electionService(hill_encryption_service);
-
         ApplicationBase::initialize(stage);
 
         if (stage == inet::INITSTAGE_LOCAL) {
@@ -30,16 +30,28 @@ namespace voting {
             WATCH(bytesSent);
             WATCH(bytesRcvd);
 
-            local_address = par("localAddress").stdstringValue();
+            local_address = par("localAddress").stringValue();
+            EV_DEBUG << local_address << std::endl;
 
-            pauseBeforePublish = par("pauseBeforePublish").doubleValue();
-            pauseBeforeForwardPortsRequest = par("pauseBeforeForwardPorts").doubleValue();
+            connection_service.importDidRegistry(storage,
+                                                 "/home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution/run/res/registry/",
+                                                 "end." + this->getFullPath().substr(0, 19) + ".json");
+            connection_service.importDidResources(storage,
+                                                  "/home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution/run/res/resources/",
+                                                  "end." + this->getFullPath().substr(0, 19) + ".json");
 
-            connection_service.importPeersList(nodes, "./");
-            connection_service.importPeerConnections(connection_map, "./");
+            const std::map<std::string, std::string> &map = storage.getDidStorage();
 
-            position = distribution_service.calculatePosition(connection_map, local_address);
-            distribution_service.getDistributionParams(connection_map, local_address, address_up, address_down);
+            //connection_service.exportDidResources("/home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution/res/resources/", storage, "test." + this->getFullPath().substr(0,19) + ".json");
+
+
+            const std::vector<did> &local_ids = storage.findAddressMatch(hash_service.hashMessage(local_address));
+            own_id = local_ids[0];
+            position = distribution_service.calculatePosition(storage, own_id);
+            distribution_service.getDistributionParams(storage, own_id, address_up, address_down);
+
+            EV_DEBUG << "address down: " << address_down << std::endl;
+            EV_DEBUG << "address up: " << address_up << std::endl;
 
             socket_up_adapter.setParentComponent(this);
             socket_down_adapter.setParentComponent(this);
@@ -55,9 +67,10 @@ namespace voting {
         }
     }
 
-    void VotingApp::handleStartOperation(inet::LifecycleOperation *) {
+    void DidVotingApp::handleStartOperation(inet::LifecycleOperation *) {
         // Export state at beginning
-        writeStateToFile("voting/peers_at_start_" + this->getFullPath().substr(0, 19) + ".json");
+        //writeStateToFile("voting/at_start_" + this->getFullPath().substr(0, 19) + ".json");
+
 
         // Schedule events
         double tCreateElection = par("tCreateElection").doubleValue();
@@ -66,7 +79,7 @@ namespace voting {
         double tConfirmVoteAt = par("tConfirmVoteAt").doubleValue();
         double tRequestKeysAt = par("tRequestKeys").doubleValue();
         double tTallyAt = par("tTallyAt").doubleValue();
-        EV_DEBUG << "place vote on: " << tPlaceVote << std::endl;
+        //EV_DEBUG << "place vote on: " << tPlaceVote << std::endl;
 
         isReceiving = par("isReceivingAtStart").boolValue();
 
@@ -102,19 +115,42 @@ namespace voting {
         }
     }
 
-    void VotingApp::initElectionDistribution(election& election) {
+    void DidVotingApp::initElectionDistribution(election &election) {
         current_hops = 0;
         publish_port = 5050;
         subscribe_port = 5051;
 
+        std::cout << "set app distr ports" << std::endl;
         socket_up_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
         socket_down_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
 
-        distribution_service.sendInitialPortsSetupRequest(&socket_up_adapter, &socket_down_adapter,
-                                                          local_address, position, address_up, address_down);
+        double down_pause = 0.0f;
+        double up_pause = 0.0f;
+
+        std::cout << "now position" << std::endl;
+        if(position >= storage.getLastestDids().size() / 2) {
+            std::cout << "delay up" << std::endl;
+            up_pause = 0.2f;
+        } else {
+            std::cout << "delay down" << std::endl;
+            down_pause = 0.2f;
+        }
+
+        std::cout << "now schedule" << std::endl;
+        tInitPortsDown = new inet::cMessage("timer");
+        tInitPortsDown->setKind(SELF_MSGKIND_DISTR_INITIAL_PORTS_SEND_DOWN);
+        scheduleAt(inet::simTime() + down_pause, tInitPortsDown);
+
+        tInitPortsUp = new inet::cMessage("timer");
+        tInitPortsUp->setKind(SELF_MSGKIND_DISTR_INITIAL_PORTS_SEND_UP);
+        scheduleAt(inet::simTime() + up_pause, tInitPortsUp);
+
+
+        //distribution_service.sendInitialPortsSetupRequest(socket_up_adapter, socket_down_adapter,
+        //                                                  local_address, position, address_up, address_down);
     }
 
-    void VotingApp::handleTimer(inet::cMessage *msg) {
+    void DidVotingApp::handleTimer(inet::cMessage *msg) {
         if (msg->getKind() == SELF_MSGKIND_CREATE_ELECTION) {
             EV_DEBUG << "create election" << std::endl;
             electionBuilder builder{1};
@@ -134,11 +170,16 @@ namespace voting {
             EV_DEBUG << "place vote" << std::endl;
             isInitializingDirectionDistribution = true;
             if (!election_box.empty()) {
+                EV_DEBUG << "election box is not empty" << std::endl;
                 isReceiving = false;
                 election &election = election_box.front();
 
                 if (!election.isPreparedForDistribution()) {
-                    election.prepareForDistribtion(nodes);
+                    const std::set<did> &set = storage.getLastestDids();
+                    std::set<std::string> ids_str;
+                    std::for_each(set.begin(), set.end(),
+                                  [&ids_str](const did &id) { ids_str.emplace(id.str()); });
+                    election.prepareForDistribtion(ids_str);
                 }
                 bool foundKey = false;
 
@@ -146,9 +187,11 @@ namespace voting {
                 int random_variable = std::rand();
                 int selected_option = random_variable % election.getOptions().size();
 
-                while(!foundKey) {
-                    foundKey = election_service->placeEncryptedVote(std::to_string(selected_option), election, own_election_keys, local_address);
+                while (!foundKey) {
+                    foundKey = election_service->placeEncryptedVote(std::to_string(selected_option), election,
+                                                                    own_election_keys, own_id.str());
                 }
+                std::cout << "now init election distribution" << std::endl;
                 initElectionDistribution(election);
             }
             //place vote on election
@@ -159,6 +202,7 @@ namespace voting {
         if (msg->getKind() == SELF_MSGKIND_REQUEST_KEY) {
             EV_DEBUG << "send election id to request key" << std::endl;
             std::string request_address = msg->par("request_address").stringValue();
+            request_keys_socket.setSocket(request_key_socket);
             request_keys_socket.setupSocket(local_address, 50061);
             request_keys_socket.setMsgKind(APP_REQUEST_KEY);
             tally_service->requestKey(request_keys_socket, election_box[0], local_address, request_address);
@@ -167,34 +211,38 @@ namespace voting {
             EV_DEBUG << "now tally" << std::endl;
             EV_DEBUG << election_box[0] << std::endl;
 
-            std::for_each(received_election_keys[election_box[0].getId()].begin(), received_election_keys[election_box[0].getId()].end(), [this](std::string received_key){
-                EV_DEBUG << "key: " << received_key << std::endl;
-            });
+            std::for_each(received_election_keys[election_box[0].getId()].begin(),
+                          received_election_keys[election_box[0].getId()].end(), [this](std::string received_key) {
+                        EV_DEBUG << "key: " << received_key << std::endl;
+                    });
 
-            election_service->decryptWithKeys(election_box[0], local_address, received_election_keys[election_box[0].getId()]);
+            election_service->decryptWithKeys(election_box[0], local_address,
+                                              received_election_keys[election_box[0].getId()]);
             isInitializingDirectionDistribution = true;
             isReceiving = false;
             initElectionDistribution(election_box[0]);
         }
         if (msg->getKind() == SELF_MSGKIND_REQUEST_KEYS) {
+            EV_DEBUG << "send election id to request key" << std::endl;
             election &election = election_box[0];
             const std::vector<std::string> &addresses_without_self = tally_service->findGroupAndFilterOwnIdentity(
                     election, local_address);
 
             float timeAdd = 0.0;
-            std::for_each(addresses_without_self.begin(), addresses_without_self.end(), [this, &timeAdd](std::string address){
-                // TODO: What happens with this, is this memory leak??
-                inet::cMessage *pMessage = new inet::cMessage();
-                omnetpp::cMsgPar *pPar = new omnetpp::cMsgPar("request_address");
-                pPar->setStringValue(address.c_str());
-                pMessage->addPar(pPar);
-                pMessage->setKind(SELF_MSGKIND_REQUEST_KEY);
+            std::for_each(addresses_without_self.begin(), addresses_without_self.end(),
+                          [this, &timeAdd](std::string address) {
+                              // TODO: What happens with this, is this memory leak??
+                              inet::cMessage *pMessage = new inet::cMessage();
+                              omnetpp::cMsgPar *pPar = new omnetpp::cMsgPar("request_address");
+                              pPar->setStringValue(address.c_str());
+                              pMessage->addPar(pPar);
+                              pMessage->setKind(SELF_MSGKIND_REQUEST_KEY);
 
-                tKeyMessages.push_back(pMessage);
-                addressPars.push_back(pPar);
-                scheduleAt(inet::simTime() + timeAdd, pMessage);
-                timeAdd += 0.3;
-            });
+                              tKeyMessages.push_back(pMessage);
+                              addressPars.push_back(pPar);
+                              scheduleAt(inet::simTime() + timeAdd, pMessage);
+                              timeAdd += 0.3;
+                          });
         }
         if (msg->getKind() == SELF_MSGKIND_CONFIRM) {
             election &election = election_box[0];
@@ -203,7 +251,7 @@ namespace voting {
                                         local_address,
                                         own_election_keys,
                                         election_keys_to_send
-                                       );
+            );
             isInitializingDirectionDistribution = true;
             isReceiving = false;
             initElectionDistribution(election);
@@ -211,68 +259,86 @@ namespace voting {
             // Setup reply key listen
             socket_no_direction_adapter.setSocket(&reply_key_socket);
             socket_no_direction_adapter.setupSocket(local_address, 50061);
-            connection_service.changeToListenState(socket_no_direction_adapter);
+            socket_no_direction_adapter.listen();
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_PORTS_SETUP_RECEIVE) {
             isReceiving = true;
             socket_no_direction_adapter.setSocket(&listen_socket);
             socket_no_direction_adapter.setupSocket(local_address, 5049);
-            connection_service.changeToListenState(socket_no_direction_adapter);
+            socket_no_direction_adapter.listen();
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_HOPS_SEND) {
+            std::cout << "now send distr hops" << std::endl;
             std::string direction = nextDirection->stringValue();
             if (direction.find("up") != std::string::npos) {
+                EV_DEBUG << "send up" << std::endl;
                 socket_up_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_HOPS_REQUEST);
                 if (request_up_socket->getState() != inet::TcpSocket::CONNECTED) {
                     socket_up_adapter.connect("tcp", address_up, 5049);
                 }
-                distribution_service.sendDirectionRequestNumberOfHops(&socket_up_adapter, current_hops);
+                distribution_service.sendDirectionRequestNumberOfHops(socket_up_adapter, current_hops);
             } else if (direction.find("down") != std::string::npos) {
+                EV_DEBUG << "send down" << std::endl;
                 socket_down_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_HOPS_REQUEST);
                 if (request_down_socket->getState() != inet::TcpSocket::CONNECTED) {
                     socket_down_adapter.connect("tcp", address_down, 5049);
                 }
-                distribution_service.sendDirectionRequestNumberOfHops(&socket_down_adapter, current_hops);
+                distribution_service.sendDirectionRequestNumberOfHops(socket_down_adapter, current_hops);
             }
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_PORTS_SETUP_FORWARD) {
+            std::cout << "forward ports setup" << std::endl;
+            EV_DEBUG << "forward ports setup" << std::endl;
             isReceiving = false;
             inet::cMsgPar contentPar = msg->par("content");
             std::string content_str = contentPar.stringValue();
 
             nlohmann::json data = nlohmann::json::parse(content_str);
-            distribution_service.getDistributionParams(connection_map, local_address, address_up, address_down);
-            position = distribution_service.calculatePosition(connection_map, local_address);
+            distribution_service.getDistributionParams(storage, own_id, address_up, address_down);
+            position = distribution_service.calculatePosition(storage, own_id);
             size_t originPosition = std::stoi(data["originPosition"].dump());
 
             if (!address_up.empty() && originPosition > position) {
-                request_up_socket->renewSocket();
-                socket_up_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
-                socket_up_adapter.setupSocket(local_address, 5049);
-                socket_up_adapter.connect("tcp", address_up, 5049);
-                distribution_service.sendDirectionRequest(&socket_up_adapter, data, position, address_down, address_up);
+                EV_DEBUG << "forward ports setup up" << std::endl;
+                if(request_up_socket->getState() != inet::TcpSocket::CONNECTING) {
+                    request_up_socket->renewSocket();
+                    socket_up_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
+                    socket_up_adapter.setupSocket(local_address, 5049);
+                    EV_DEBUG << "request up socket state: " << inet::TcpSocket::stateName(request_up_socket->getState()) << std::endl;
+                    socket_up_adapter.connect("tcp", address_up, 5049);
+                }
+                distribution_service.sendDirectionRequest(socket_up_adapter, data, position, address_down, address_up);
             } else if (!address_down.empty() && originPosition < position) {
+                EV_DEBUG << "forward ports setup down" << std::endl;
                 request_down_socket->renewSocket();
                 socket_down_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
                 socket_down_adapter.setupSocket(local_address, 5049);
                 socket_down_adapter.connect("tcp", address_down, 5049);
-                distribution_service.sendDirectionRequest(&socket_down_adapter, data, position, address_down, address_up);
+                distribution_service.sendDirectionRequest(socket_down_adapter, data, position, address_down, address_up);
             }
+            std::cout << "has send direction requets" << std::endl;
+        }
+        if (msg->getKind() == SELF_MSGKIND_DISTR_INITIAL_PORTS_SEND_UP) {
+            std::cout << "now send up" << std::endl;
+            socket_up_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
+            distribution_service.sendInitialPortsSetupRequest(socket_up_adapter, local_address, position, address_up);
+        }
+        if (msg->getKind() == SELF_MSGKIND_DISTR_INITIAL_PORTS_SEND_DOWN) {
+            std::cout << "now send down" << std::endl;
+            socket_down_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_REQUEST);
+            distribution_service.sendInitialPortsSetupRequest(socket_down_adapter, local_address, position, address_down);
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_INITIAL_DIRECTION_SEND) {
-            if (!address_up.empty()) {
-                socket_up_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST);
-            }
+            socket_up_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST);
+            socket_down_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST);
 
-            if (!address_down.empty()) {
-                socket_down_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST);
-            }
-            sendTowards = distribution_service.sendInitialDistributionRequestDirection(&socket_up_adapter,
-                                                                                       &socket_down_adapter,
+            sendTowards = distribution_service.sendInitialDistributionRequestDirection(socket_up_adapter,
+                                                                                       socket_down_adapter,
                                                                                        local_address,
                                                                                        address_up,
                                                                                        address_down,
-                                                                                       nodes.size(), position);
+                                                                                       storage.getLastestDids().size(),
+                                                                                       position);
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_SUBSCRIBE) {
             isReceiving = true;
@@ -280,7 +346,7 @@ namespace voting {
             socket_no_direction_adapter.setSocket(subscribe_socket);
             socket_no_direction_adapter.setupSocket(local_address, subscribe_port);
             if (subscribe_socket->getState() != inet::TcpSocket::LISTENING) {
-                connection_service.changeToListenState(socket_no_direction_adapter);
+                socket_no_direction_adapter.listen();
             }
             printSocketMap();
         }
@@ -320,32 +386,47 @@ namespace voting {
                 }
             }
 
-            distribution_service.sendForwardistributionRequestDirection(&socket_up_adapter,
-                                                                        &socket_down_adapter,
+            distribution_service.sendForwardistributionRequestDirection(socket_up_adapter,
+                                                                        socket_down_adapter,
                                                                         direction);
 
         }
         if (msg->getKind() == SELF_MSGKIND_DISTR_PUBLISH) {
+            std::cout << "now publish" << std::endl;
+            EV_DEBUG << "self message now distr publish" << std::endl;
             //publish_socket->setTCPAlgorithmClass("TcpNoCongestionControl");
             printSocketMap();
-
-            publish_socket_adapter.setupSocket(local_address, publish_port);
+            std::cout << "now set socket" << std::endl;
+            publish_socket_adapter.setSocket(publish_socket);
+            publish_socket_adapter.setIsMultiPackageData(true);
             publish_socket_adapter.setMsgKind(APP_DISTR_PUBLISH);
-            if (sendTowards =="up") {
+            publish_socket_adapter.setupSocket(local_address, publish_port);
+            if (sendTowards == "up") {
+                std::cout << "now send up: " << address_up << std::endl;
+                EV_DEBUG << "connect up: " << address_up << std::endl;
                 publish_socket_adapter.connect("tcp", address_up, publish_port);
-            } else if (sendTowards =="down") {
+            } else if (sendTowards == "down") {
+                std::cout << "now connect down: "  << address_down << std::endl;
+                EV_DEBUG << "connect down " << address_down << std::endl;
                 publish_socket_adapter.connect("tcp", address_down, publish_port);
             }
-            distribution_service.sendElection(&publish_socket_adapter, election_box[0], publish_port);
+            EV_DEBUG << "has connected now send" << std::endl;
+            std::cout << "now send election" << std::endl;
+            distribution_service.sendElection(publish_socket_adapter, election_box.at(0), publish_port);
+            std::cout << "has send election" << std::endl;
             closePublishMessage = new inet::cMessage();
             closePublishMessage->setKind(SELF_MSGKIND_CLOSE_PUBLISH_SOCKET);
-            scheduleAt(inet::simTime() + 0.1, closePublishMessage);
+            std::cout << "now shedule close" << std::endl;
+            EV_DEBUG << "pub socket state" << std::endl;
+            EV_DEBUG << inet::TcpSocket::stateName(publish_socket->getState()) << std::endl;
+            scheduleAt(inet::simTime() + pause_before_close_publish, closePublishMessage);
             isInitializingDirectionDistribution = false;
         }
         if (msg->getKind() == SELF_MSGKIND_CLOSE_SUBSCRIBE_SOCKET) {
             subscribe_socket_adapter.setSocket(subscribe_socket);
 
             try {
+                EV_DEBUG << "try close subscribe socket" << std::endl;
                 printSocketMap();
                 subscribe_socket->close();
             } catch (std::exception &ex) {
@@ -355,8 +436,10 @@ namespace voting {
         }
         if (msg->getKind() == SELF_MSGKIND_CLOSE_PUBLISH_SOCKET) {
             printSocketMap();
+            std::cout << "now close" << std::endl;
             try {
                 publish_socket_adapter.close();
+                std::cout << "has closed" << std::endl;
             } catch (std::exception &ex) {
                 EV_DEBUG << "couldnt close" << std::endl;
                 EV_DEBUG << ex.what() << std::endl;
@@ -364,20 +447,20 @@ namespace voting {
         }
     }
 
-    void VotingApp::handleCrashOperation(inet::LifecycleOperation *) {
+    void DidVotingApp::handleCrashOperation(inet::LifecycleOperation *) {
         EV_DEBUG << "handle crash" << std::endl;
     }
 
-    void VotingApp::handleStopOperation(inet::LifecycleOperation *) {
+    void DidVotingApp::handleStopOperation(inet::LifecycleOperation *) {
         EV_DEBUG << "handle stop" << std::endl;
     }
 
-    void VotingApp::socketEstablished(inet::TcpSocket *socket) {
+    void DidVotingApp::socketEstablished(inet::TcpSocket *socket) {
         EV_DEBUG << "socket established" << std::endl;
         TcpAppBase::socketEstablished(socket);;
     }
 
-    void VotingApp::handleMessageWhenUp(omnetpp::cMessage *msg) {
+    void DidVotingApp::handleMessageWhenUp(omnetpp::cMessage *msg) {
         if (msg->isSelfMessage()) {
             handleTimer(msg);
         } else if (request_up_socket->belongsToSocket(msg)) {
@@ -390,11 +473,11 @@ namespace voting {
             request_down_socket->processMessage(msg);
         } else if (listen_socket.belongsToSocket(msg)) {
             listen_socket.processMessage(msg);
-        } else if(reply_key_socket.belongsToSocket(msg)){
+        } else if (reply_key_socket.belongsToSocket(msg)) {
             reply_key_socket.processMessage(msg);
         } else if (subscribe_socket->belongsToSocket(msg)) {
             subscribe_socket->processMessage(msg);
-        } else if(publish_socket->belongsToSocket(msg)) {
+        } else if (publish_socket->belongsToSocket(msg)) {
             publish_socket->processMessage(msg);
         } else if (request_key_socket->belongsToSocket(msg)) {
             request_key_socket->processMessage(msg);
@@ -451,17 +534,17 @@ namespace voting {
         //     throw inet::cRuntimeError("Unknown incoming message: '%s'", msg->getName());
     }
 
-    void VotingApp::socketStatusArrived(inet::TcpSocket *socket, inet::TcpStatusInfo *status) {
+    void DidVotingApp::socketStatusArrived(inet::TcpSocket *socket, inet::TcpStatusInfo *status) {
         TcpAppBase::socketStatusArrived(socket, status);
     }
 
-    void VotingApp::socketAvailable(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo) {
+    void DidVotingApp::socketAvailable(inet::TcpSocket *socket, inet::TcpAvailableInfo *availableInfo) {
         auto newSocket = new inet::TcpSocket(availableInfo); // create socket using received info
         socketMap.addSocket(newSocket); // store accepted connection
         if (socket->getLocalPort() == 5049) {
             request_socket_id = availableInfo->getNewSocketId();
         }
-        if(availableInfo->getRemotePort() == 50061) {
+        if (availableInfo->getRemotePort() == 50061) {
             reply_key_socket.setOutputGate(gate("socketOut"));
             reply_key_socket.accept(availableInfo->getNewSocketId());
         } else if (std::equal(address_up.begin(), address_up.end(), availableInfo->getRemoteAddr().str().begin())) {
@@ -481,28 +564,64 @@ namespace voting {
         }
     }
 
-    void VotingApp::socketDataArrived(inet::TcpSocket *socket, inet::Packet *msg, bool urgent) {
-        const inet::Ptr<const inet::BytesChunk> &intrusivePtr = msg->peekData<inet::BytesChunk>();
-        uint8_t appMsgKind = intrusivePtr->getByte(0);
+    void DidVotingApp::socketDataArrived(inet::TcpSocket *socket, inet::Packet *msg, bool urgent) {
+        uint8_t appMsgKind;
+        int offset = 1;
+        if(!is_receiving_multipackage_message) {
+            const inet::Ptr<const inet::BytesChunk> &intrusivePtr = msg->peekData<inet::BytesChunk>();
+            appMsgKind = intrusivePtr->getByte(0);
+        } else {
+            EV_DEBUG << "is receiving multi package" << std::endl;
+            appMsgKind = saved_package_type;
+            offset = 0;
+        }
 
         const inet::Ptr<const inet::BytesChunk> &ptr = msg->peekData<inet::BytesChunk>();
         EV_DEBUG << "as bytes: ";
+        EV_DEBUG << std::endl;
+
         std::string content_str;
-        std::transform(ptr->getBytes().begin() + 1, ptr->getBytes().end(), std::back_inserter(content_str),
+        std::transform(ptr->getBytes().begin() + offset, ptr->getBytes().end(), std::back_inserter(content_str),
                        [this](uint8_t d) {
                            EV_DEBUG << std::to_string(d) << " ";
                            return (char) d;
                        });
-        EV_DEBUG << std::endl;
+
         EV_DEBUG << "as string: " << content_str << std::endl;
 
+        if (is_receiving_multipackage_message) {
+            int count = 0;
+            std::for_each(ptr->getBytes().rbegin(), ptr->getBytes().rbegin() + 5, [&count](char c) {
+                if (c == '#') {
+                    count++;
+                };
+            });
+            EV_DEBUG << "count: " << count << std::endl;
+            if (count > 3) {
+                EV_DEBUG << "found exit sequence" << std::endl;
+                content_str = "";
+                std::transform(ptr->getBytes().begin() + offset, ptr->getBytes().end() - count,
+                               std::back_inserter(content_str), [](uint8_t d) {
+                            return (char) d;
+                        });
+                has_received_last_package_from_multi_message = true;
+            }
+        }
 
         switch (appMsgKind) {
             case APP_DISTR_PORTS_SETUP_REQUEST: {
+                std::cout << "send ports request " << std::endl;
+                EV_DEBUG << "receied ports setup request" << std::endl;
                 socket->setOutputGate(gate("socketOut"));
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_DISTR_PORTS_SETUP_RESPONSE);
-                distribution_service.sendSuccessResponse(&socket_no_direction_adapter);
+                EV_DEBUG << "send success" << std::endl;
+                EV_DEBUG << "local port" << socket->getLocalPort() << std::endl;
+                EV_DEBUG << "local address" << socket->getLocalAddress() << std::endl;
+                EV_DEBUG << "remote port" << socket->getRemotePort() << std::endl;
+                EV_DEBUG << "remote address" << socket->getRemoteAddress() << std::endl;
+
+                distribution_service.sendSuccessResponse(socket_no_direction_adapter);
 
                 nlohmann::json setup_info = nlohmann::json::parse(content_str);
                 subscribe_port = setup_info["origin_publish_port"];
@@ -517,6 +636,8 @@ namespace voting {
             }
                 break;
             case APP_DISTR_PORTS_SETUP_RESPONSE: {
+                std::cout << "comes here " << std::endl;
+                EV_DEBUG << "receied ports setup response" << std::endl;
                 if (content_str.find("accept") != -1) {
 
                     socket_no_direction_adapter.setSocket(socket);
@@ -532,7 +653,7 @@ namespace voting {
                         } else if (address_down.empty()) {
                             sendTowards = "up";
                             nextDirection->setStringValue("up");
-                        } else if (position < nodes.size() / 2) {
+                        } else if (position < storage.getLastestDids().size() / 2) {
                             sendTowards = "up";
                             nextDirection->setStringValue("up");
                         } else {
@@ -544,35 +665,39 @@ namespace voting {
                         directionSelfMessage->setKind(SELF_MSGKIND_DISTR_INITIAL_DIRECTION_SEND);
 
                         isInitializingDirectionDistribution = false;
-                        scheduleAt(inet::simTime() + 0.1, directionSelfMessage);
+                        scheduleAt(inet::simTime() + pause_before_send_initial_direction, directionSelfMessage);
                     }
                 }
                 break;
             }
             case APP_DISTR_PRE_PUBLISH_DIRECTION_REQUEST: {
+                EV_DEBUG << "pre publish request" << std::endl;
                 received_from_direction = distribution_service.invertDirection(content_str);
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_DIRECTION_RESPONSE);
                 socket->setOutputGate(gate("socketOut"));
-                distribution_service.sendSuccessResponse(&socket_no_direction_adapter);
+                distribution_service.sendSuccessResponse(socket_no_direction_adapter);
                 EV_DEBUG << "now close " << std::endl;
             }
                 break;
             case APP_DISTR_PRE_PUBLISH_DIRECTION_RESPONSE: {
+                std::cout << "received direction response " << std::endl;
+                EV_DEBUG << "pre publish response" << std::endl;
                 hopsSelfMessage = new inet::cMessage("timer");
                 hopsSelfMessage->setKind(SELF_MSGKIND_DISTR_HOPS_SEND);
-                scheduleAt(inet::simTime() + 0.1, hopsSelfMessage);
+                scheduleAt(inet::simTime() + pauseBeforeSendHops, hopsSelfMessage);
                 isReceiving = true;
             }
                 break;
             case APP_DISTR_PRE_PUBLISH_HOPS_REQUEST: {
+                EV_DEBUG << "try close subscribe socket" << std::endl;
                 current_hops = std::stoi(content_str);
                 current_hops++;
 
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_DISTR_PRE_PUBLISH_HOPS_RESPONSE);
                 socket->setOutputGate(gate("socketOut"));
-                distribution_service.sendSuccessResponse(&socket_no_direction_adapter);
+                distribution_service.sendSuccessResponse(socket_no_direction_adapter);
                 socket_no_direction_adapter.close();
 
                 subscribeSelfMessage = new inet::cMessage("timer");
@@ -581,6 +706,11 @@ namespace voting {
             }
                 break;
             case APP_DISTR_PRE_PUBLISH_HOPS_RESPONSE: {
+
+                EV_DEBUG << "pre publish hops" << std::endl;
+                EV_DEBUG << "is_receiving_multipackage_message: " << is_receiving_multipackage_message << std::endl;
+                EV_DEBUG << "has_received_last_package_from_multi_message" << has_received_last_package_from_multi_message << std::endl;
+
                 this->socket_no_direction_adapter.setSocket(socket);
                 this->socket_no_direction_adapter.close();
 
@@ -592,62 +722,92 @@ namespace voting {
             }
                 break;
             case APP_DISTR_PUBLISH: {
-                char vt = 11;
-                std::stringstream test(content_str);
-                std::string segment;
-                std::vector<std::string> seglist;
+                std::cout << "now receive app distr publish" << std::endl;
+                std::cout << content_str << std::endl;
+                EV_DEBUG << "received distr publish package" << std::endl;
+                if (!is_receiving_multipackage_message && !has_received_last_package_from_multi_message) {
+                    is_receiving_multipackage_message = true;
+                    saved_package_type = APP_DISTR_PUBLISH;
+                    message_stream << content_str;
+                } else if (is_receiving_multipackage_message && has_received_last_package_from_multi_message) {
+                    message_stream << content_str;
+                    EV_DEBUG << message_stream.str() << std::endl;
 
-                while (std::getline(test, segment, vt)) {
-                    subscribe_socket_adapter.addProgrammedMessage(
-                            socketMessage{segment, socket->getRemoteAddress().str()});
-                    seglist.push_back(segment);
-                }
-                election el = distribution_service.receiveElection(&subscribe_socket_adapter);
+                    EV_DEBUG << "distr publish" << std::endl;
+                    char vt = 11;
+                    std::string segment;
+                    std::vector<std::string> seglist;
 
-                distribution_service.updateElectionBox(el, election_box);
+                    while (std::getline(message_stream, segment, vt)) {
+                        EV_DEBUG << segment <<  std::endl;
+                        subscribe_socket_adapter.addProgrammedMessage(
+                                socketMessage{segment, socket->getRemoteAddress().str()});
+                        seglist.push_back(segment);
+                    }
+                    election el = distribution_service.receiveElection(subscribe_socket_adapter, local_address);
 
-                if (address_up.empty() xor address_down.empty()) {
-                    if (current_hops < nodes.size() - 1) {
+                    distribution_service.updateElectionBox(el, election_box);
+                    EV_DEBUG << "has updated election box" << std::endl;
+
+                    EV_DEBUG << "address_up: " << address_up << std::endl;
+                    EV_DEBUG << "address_up empty: " << address_up.empty() << std::endl;
+                    EV_DEBUG << "address_down: " << address_down << std::endl;
+                    EV_DEBUG << "address_down empty: " << address_down.empty() << std::endl;
+
+                    if (address_up.empty() xor address_down.empty()) {
+                        if (current_hops < storage.getLastestDids().size() - 1) {
+                            directionSelfMessage = new inet::cMessage("timer");
+                            nextDirection = new omnetpp::cMsgPar("direction");
+
+                            if (address_up.empty()) {
+                                EV_DEBUG << "next send down" << std::endl;
+                                nextDirection->setStringValue("down");
+                                sendTowards = "down";
+                            } else if (address_down.empty()) {
+                                EV_DEBUG << "next send up" << std::endl;
+                                nextDirection->setStringValue("up");
+                                sendTowards = "up";
+                            }
+
+                            directionSelfMessage->addPar(nextDirection);
+                            directionSelfMessage->setKind(SELF_MSGKIND_DISTR_DIRECTION_FORWARD);
+                            scheduleAt(inet::simTime() + pause_before_send_direction_forward, directionSelfMessage);
+                        }
+                    } else if (!address_up.empty() and !address_down.empty()) {
+                        EV_DEBUG << "next both directions empty" << std::endl;
                         directionSelfMessage = new inet::cMessage("timer");
                         nextDirection = new omnetpp::cMsgPar("direction");
-
-                        if (address_up.empty()) {
-                            nextDirection->setStringValue("down");
-                            sendTowards = "down";
-                        } else if (address_down.empty()) {
-                            nextDirection->setStringValue("up");
-                            sendTowards = "up";
-                        }
-
+                        nextDirection->setStringValue(
+                                distribution_service.invertDirection(received_from_direction).c_str());
+                        sendTowards = distribution_service.invertDirection(received_from_direction);
                         directionSelfMessage->addPar(nextDirection);
                         directionSelfMessage->setKind(SELF_MSGKIND_DISTR_DIRECTION_FORWARD);
-                        scheduleAt(inet::simTime() + 0.2, directionSelfMessage);
+                        scheduleAt(inet::simTime() + pause_before_send_direction_forward, directionSelfMessage);
+                    } else {
+                        EV_DEBUG << "next else" << std::endl;
+                        directionSelfMessage = new inet::cMessage("timer");
+                        nextDirection = new omnetpp::cMsgPar("direction");
+                        nextDirection->setStringValue(received_from_direction.c_str());
+                        sendTowards = received_from_direction;
+                        directionSelfMessage->addPar(nextDirection);
+                        directionSelfMessage->setKind(SELF_MSGKIND_DISTR_DIRECTION_FORWARD);
+                        scheduleAt(inet::simTime() + pause_before_send_direction_forward, directionSelfMessage);
                     }
-                } else if (!address_up.empty() and !address_down.empty()) {
-                    directionSelfMessage = new inet::cMessage("timer");
-                    nextDirection = new omnetpp::cMsgPar("direction");
-                    nextDirection->setStringValue(
-                            distribution_service.invertDirection(received_from_direction).c_str());
-                    sendTowards = distribution_service.invertDirection(received_from_direction);
-                    directionSelfMessage->addPar(nextDirection);
-                    directionSelfMessage->setKind(SELF_MSGKIND_DISTR_DIRECTION_FORWARD);
-                    scheduleAt(inet::simTime() + 0.2, directionSelfMessage);
-                } else {
-                    directionSelfMessage = new inet::cMessage("timer");
-                    nextDirection = new omnetpp::cMsgPar("direction");
-                    nextDirection->setStringValue(received_from_direction.c_str());
-                    sendTowards = received_from_direction;
-                    directionSelfMessage->addPar(nextDirection);
-                    directionSelfMessage->setKind(SELF_MSGKIND_DISTR_DIRECTION_FORWARD);
-                    scheduleAt(inet::simTime() + 0.2, directionSelfMessage);
+                    closeSubscribeMessage = new inet::cMessage("timer");
+                    closeSubscribeMessage->setKind(SELF_MSGKIND_CLOSE_SUBSCRIBE_SOCKET);
+                    scheduleAt(inet::simTime(), closeSubscribeMessage);
+                    is_receiving_multipackage_message = false;
+                    has_received_last_package_from_multi_message = false;
+                    message_stream.str(std::string());
+                } else if (is_receiving_multipackage_message && !has_received_last_package_from_multi_message) {
+                    message_stream << content_str;
                 }
-                closeSubscribeMessage = new inet::cMessage("timer");
-                closeSubscribeMessage->setKind(SELF_MSGKIND_CLOSE_SUBSCRIBE_SOCKET);
-                scheduleAt(inet::simTime(), closeSubscribeMessage);
             }
                 break;
             case APP_REQUEST_KEY: {
-                socket_no_direction_adapter.addProgrammedMessage(socketMessage{content_str, socket->getRemoteAddress().str()});
+                EV_DEBUG << "request key" << std::endl;
+                socket_no_direction_adapter.addProgrammedMessage(
+                        socketMessage{content_str, socket->getRemoteAddress().str()});
                 socket_no_direction_adapter.setSocket(socket);
 
                 size_t election_id = tally_service->receiveKeyRequest(socket_no_direction_adapter);
@@ -658,26 +818,28 @@ namespace voting {
                 tally_service->keyResponse(socket_no_direction_adapter, election_id, &election_keys_to_send);
 
             }
-            break;
+                break;
             case APP_RESPONSE_KEY: {
+                EV_DEBUG << "response key" << std::endl;
                 socket_no_direction_adapter.setSocket(socket);
                 socket_no_direction_adapter.setMsgKind(APP_RESPONSE_KEY_CLOSE);
-                socket_no_direction_adapter.addProgrammedMessage(socketMessage{content_str, socket->getRemoteAddress().str()});
+                socket_no_direction_adapter.addProgrammedMessage(
+                        socketMessage{content_str, socket->getRemoteAddress().str()});
                 tally_service->receiveKey(socket_no_direction_adapter, election_box[0].getId(), received_election_keys);
             }
-            break;
+                break;
         }
-
         TcpAppBase::socketDataArrived(socket, msg, urgent);
     }
 
-    void VotingApp::writeStateToFile(std::string file) {
+    void DidVotingApp::writeStateToFile(std::string file) {
         //const std::filesystem::path &currentPath = std::filesystem::current_path();
         EV_DEBUG << "print: " << file << std::endl;
-        connection_service.exportPeersList("./results/", nodes, file);
+        connection_service.exportDidRegistry("./results/", storage, file);
+        connection_service.exportDidResources("./results/", storage, file);
     }
 
-    void VotingApp::printSocketMap() {
+    void DidVotingApp::printSocketMap() {
         std::for_each(socketMap.getMap().begin(), socketMap.getMap().end(),
                       [this](std::pair<int, inet::ISocket *> idSocketPair) {
                           inet::TcpSocket *pSocket = inet::check_and_cast<inet::TcpSocket *>(idSocketPair.second);
@@ -685,7 +847,8 @@ namespace voting {
                           << idSocketPair.first << ": " << pSocket->getLocalAddress() << ":" << pSocket->getLocalPort()
                           << "-" << pSocket->getRemoteAddress() << ":" << pSocket->getRemotePort() << ", open="
                           << pSocket->isOpen() << ", isConnected=" << std::to_string(pSocket->getState() ==
-                          inet::TcpSocket::CONNECTED) << ")" << std::endl;
+                                                                                     inet::TcpSocket::CONNECTED) << ")"
+                          << std::endl;
                       });
     }
 }

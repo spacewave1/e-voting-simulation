@@ -20,7 +20,6 @@
 namespace voting {
     class DidVotingSetupApp : public inet::TcpAppBase {
         inet::cMessage *connectSelfMessage;
-        inet::cMessage *sendDataSelfMessage;
         inet::cMessage *listenStartMessage;
         inet::cMessage *closeSocketMessage;
         inet::cMessage *listenUpSyncMessage;
@@ -28,6 +27,7 @@ namespace voting {
         inet::cMessage *listenDownSyncMessage;
         inet::cMessage *forwardUpSyncMessage;
         inet::cMessage *returnDownSyncMessage;
+        inet::cMessage *connectionReplyMessage;
         didConnectionService connection_service;
         didSyncService sync_service;
         inetSocketAdapter socket_adapter;
@@ -35,10 +35,15 @@ namespace voting {
 
         // TODO: Migrate to use peer
         std::set<std::string> nodes;
-        inMemoryStorage storage;
+        inMemoryStorage storage{};
         std::string nodesString;
+        std::stringstream message_stream;
 
         bool isReturning = false;
+
+        bool isReceivingMultipackageMessage = false;
+        bool hasReceivedLastPackageFromMultiMessage = false;
+        uint8_t saved_package_type = 0;
 
         float forwardRequestDelta = 0.1f;
         float returnSyncRequestDelta = 0.5f;

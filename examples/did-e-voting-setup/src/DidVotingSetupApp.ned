@@ -9,8 +9,7 @@ simple DidVotingSetupApp like IApp
         int localPort = default(-1);  // local port
         bool active = default(true);
         string connectAddress = default("");
-        double tOpen @unit(s) = default(1s);
-        double tSend @unit(s) = default(1s);
+        double tConnect @unit(s) = default(1s);
         double tListenStart @unit(s) = default(0s);
         double tSyncInit @unit(s) = default(-1s);
         double tListenDownSync @unit(s) = default(3s);

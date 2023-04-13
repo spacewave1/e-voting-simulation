@@ -17,7 +17,6 @@
 namespace voting {
     class VotingSetupApp : public inet::TcpAppBase {
         inet::cMessage *connectSelfMessage;
-        inet::cMessage *sendDataSelfMessage;
         inet::cMessage *listenStartMessage;
         inet::cMessage *closeSocketMessage;
         inet::cMessage *initSyncMessage;
@@ -25,6 +24,7 @@ namespace voting {
         inet::cMessage *listenUpSyncMessage;
         inet::cMessage *forwardUpSyncMessage;
         inet::cMessage *returnDownSyncMessage;
+        inet::cMessage *connectionReplyMessage;
         bool isReturning = false;
         connectionService connection_service;
         syncService sync_service;
@@ -37,10 +37,10 @@ namespace voting {
         std::map<std::string, std::string> connection_map;
         std::string nodesString;
 
+        float connectionRequestReplyDelta = 0.01f;
         float forwardRequestDelta = 0.1f;
         float returnSyncRequestDelta = 0.5f;
         float closeSyncForwardSocketDelta = 0.01f;
-        float connectionRequestReplyDelta = 0.01f;
         float listenUpDelta = 0.01f;
 
         inet::TcpSocket* downSyncSocket = new inet::TcpSocket();
