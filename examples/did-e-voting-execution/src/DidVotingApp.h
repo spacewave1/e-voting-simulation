@@ -52,10 +52,11 @@ namespace voting {
 
         // Multipackage
         bool is_receiving_multipackage_message = false;
+        int exit_sequence_count = 0;
         bool has_received_last_package_from_multi_message = false;
         uint8_t saved_package_type = 0;
         uint8_t last_received_package_type = 0;
-        std::stringstream message_stream;
+        std::stringstream multi_message_stream;
 
         inetSocketAdapter socket_up_adapter;
         inetSocketAdapter socket_down_adapter;
@@ -109,8 +110,8 @@ namespace voting {
         double pauseBeforePublish = 0.1;
         double pauseBeforeSendHops = 0.0;
         double pause_before_close_publish = 0.1;
-        double pause_before_send_initial_direction = 0.0;
-        double pauseBeforeForwardPortsRequest = 0.1;
+        double pause_before_send_initial_direction = 0.1;
+        double pauseBeforeForwardPortsRequest = 0.2;
         double pause_before_send_direction_forward = 0.2;
 
         void handleTimer(inet::cMessage *msg) override;
