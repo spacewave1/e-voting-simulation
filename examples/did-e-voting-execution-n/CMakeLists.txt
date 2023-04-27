@@ -1,28 +1,27 @@
 # This is a basic example of an OMNeT++ project using CMake.
 # Compared to more advanced projects, this example depends only on OMNeT++ itself.
 
-project(VotingSimulationNProject)
+project(DidVotingSimulationNProject)
 cmake_minimum_required(VERSION 3.13)
 
 include_directories(../../../core/src)
 
 # OMNeT++ projects are usually built as shared objects (dynamic libraries),
 # which are loaded and executed by opp_run or opp_run_debug later on (see add_opp_run below).
-add_library(VotingSimulationN SHARED
-        ../e-voting-execution/src/VotingApp.h
-        ../e-voting-execution/src/VotingApp.cc
-        src/VotingApp.ned
+add_library(DidVotingSimulationN SHARED
+        ../did-e-voting-execution/src/DidVotingApp.h
+        ../did-e-voting-execution/src/DidVotingApp.cc
+        src/DidVotingApp.ned
         src/Voting.ned
         ../../src/inetSocketAdapter.h
         ../../src/inetSocketAdapter.cpp
-        ../../src/PacketsKind.h
-        )
+        ../../src/PacketsKind.h)
 
 # Define where to look for *.ned files when using your simulation model
-set_target_properties(VotingSimulationN PROPERTIES NED_FOLDERS src)
+set_target_properties(DidVotingSimulationN PROPERTIES NED_FOLDERS src)
 
 # Our library depends on the OMNeT++ libraries
-target_link_libraries(VotingSimulationN PUBLIC OmnetPP::sim INET vote_core)
+target_link_libraries(DidVotingSimulationN PUBLIC OmnetPP::sim INET vote_core)
 
 #generate_opp_message(src/Tone.msg TARGET PcapRecorder)
 
@@ -40,7 +39,7 @@ target_link_libraries(VotingSimulationN PUBLIC OmnetPP::sim INET vote_core)
 include(AddOppRun)
 #add_opp_run(basic DEPENDENCY basic_example WORKING_DIRECTORY run)
 
-add_opp_run(votingN DEPENDENCY INET DEPENDENCY VotingSimulationN WORKING_DIRECTORY run)
+add_opp_run(did_votingN DEPENDENCY INET DEPENDENCY DidVotingSimulationN WORKING_DIRECTORY run)
 
 # Bonus: test cases for your simulation model
 #
@@ -49,4 +48,4 @@ add_opp_run(votingN DEPENDENCY INET DEPENDENCY VotingSimulationN WORKING_DIRECTO
 # add_opp_run(basic ...).
 # You can run the tests via `make test` or invoking `ctest` in your build directory.
 enable_testing()
-add_opp_test(votingN CONFIG Reverse SIMTIME_LIMIT 20s SUFFIX reversed)
+add_opp_test(did_votingN CONFIG Reverse SIMTIME_LIMIT 20s SUFFIX reversed)
