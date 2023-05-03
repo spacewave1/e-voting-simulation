@@ -3,6 +3,8 @@ examples/e-voting-setup/run/results/
 examples/e-voting-setup-n/run/results/
 examples/e-voting-execution/run/results/
 examples/e-voting-execution-n/run/results/
+examples/e-voting-execution-n/run/connections.json
+examples/e-voting-execution-n/run/peers.json
 examples/did-e-voting-setup/run/results/
 examples/did-e-voting-setup-n/run/results/
 examples/did-e-voting-execution/run/results/
