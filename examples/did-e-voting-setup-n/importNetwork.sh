@@ -1,0 +1,2 @@
+cp ../e-voting-setup-n/run/results/sync/connections/afterReturnReply.Simulation.ethHost1.app[0].json run/connections.json
+cp ../e-voting-setup-n/run/results/sync/nodes/afterReturnReply.Simulation.ethHost1.app[0].json run/peers.json

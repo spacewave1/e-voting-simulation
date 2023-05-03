@@ -1,0 +1,2 @@
+cp -r ../did-e-voting-setup/run/results/sync/registry/ run/res
+cp -r ../did-e-voting-setup/run/results/sync/resources/ run/res

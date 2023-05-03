@@ -35,10 +35,10 @@ namespace voting {
 
             connection_service.importDidRegistry(storage,
                                                  "/home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution/run/res/registry/",
-                                                 "end." + this->getFullPath().substr(0, 19) + ".json");
+                                                 "end." + this->getFullPath() + ".json");
             connection_service.importDidResources(storage,
                                                   "/home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution/run/res/resources/",
-                                                  "end." + this->getFullPath().substr(0, 19) + ".json");
+                                                  "end." + this->getFullPath() + ".json");
 
             const std::map<std::string, std::string> &map = storage.getDidStorage();
 

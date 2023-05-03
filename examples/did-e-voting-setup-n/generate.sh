@@ -1,6 +1,6 @@
 # Generate ini file
 file="./run/omnetpp.ini"
-n=8
+n=$n
 nRouters=4
 tConnect=0.02
 tSend=0.04
@@ -115,7 +115,7 @@ echo "" >> $ned_file
 
 echo "network Simulation" >> $ned_file
 echo "{" >> $ned_file
-echo -e '\t@display("'bgb=$((n*100+100)),$((n/2*100+100))'");' >> $ned_file
+echo -e '\t@display("'bgb=900,$((n/2*100+100))'");' >> $ned_file
 echo -e '\tsubmodules:' >> $ned_file
 echo -e '\t\tconfigurator: Ipv4NetworkConfigurator {' >> $ned_file
 echo -e '\t\t\t@display("p=80,50");' >> $ned_file
