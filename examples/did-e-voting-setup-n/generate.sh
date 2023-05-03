@@ -1,6 +1,6 @@
 # Generate ini file
 file="./run/omnetpp.ini"
-n=4
+n=8
 nRouters=4
 tConnect=0.02
 tSend=0.04
@@ -23,7 +23,7 @@ do
   echo "*.ethHost$i.app[0].active = true" >> $file
   echo "*.ethHost$i.app[0].localAddress = \"10.0.0.$((1+4*(i-1)))\"" >> $file
   echo "*.ethHost$i.app[0].localPort = 5555" >> $file
-  if [[ $i < $n ]]; then
+  if ((i < n)); then
     echo "*.ethHost$i.app[0].connectAddress = \"10.0.0.$((1+4*i))\"" >> $file
     unset connectTime
     connectTime=$(awk -v i="${i}" -v tConnect="${tConnect}" -v tDelta="${tDelta}" 'BEGIN{print (tConnect+tDelta*(i-1))}')
@@ -115,7 +115,7 @@ echo "" >> $ned_file
 
 echo "network Simulation" >> $ned_file
 echo "{" >> $ned_file
-echo -e '\t@display("bgb=1600,800");' >> $ned_file
+echo -e '\t@display("'bgb=$((n*100+100)),$((n/2*100+100))'");' >> $ned_file
 echo -e '\tsubmodules:' >> $ned_file
 echo -e '\t\tconfigurator: Ipv4NetworkConfigurator {' >> $ned_file
 echo -e '\t\t\t@display("p=80,50");' >> $ned_file
@@ -128,20 +128,14 @@ for (( i=1; i <= n; ++i ))
 do
   x=0
   y=0
-  c=$((i % nRouters))
-  m=$((i / (nRouters + 1)))
-  if [ $c == 1 ]; then
+  c=$((i % 2))
+  m=$((i / 2))
+  if [ $c == 0 ]; then
     x=100
-    y=$((400+100*m))
-  elif [ $c == 2 ]; then
+    y=$((100+100*(m-1)))
+  elif [ $c == 1 ]; then
     x=700
-    y=$((400+100*m))
-  elif [ $c == 3 ]; then
-    x=$((400+200*m))
-    y=200
-  elif [ $c == 0 ]; then
-    x=$((400+100*m))
-    y=600
+    y=$((100+100*m))
   fi
 
   echo -e '\t\tethHost'$i': StandardHost {' >> $ned_file
@@ -153,21 +147,16 @@ done
 for (( i=1; i <= nRouters; ++i ))
 do
   x=0
-    y=0
-    c=$((i % nRouters))
-    if [ $c == 1 ]; then
-      x=300
-      y=400
-    elif [ $c == 2 ]; then
-      x=500
-      y=400
-    elif [ $c == 3 ]; then
-      x=400
-      y=300
-    elif [ $c == 0 ]; then
-      x=400
-      y=500
-    fi
+  y=0
+  c=$((i % 2))
+  m=$((i / 2))
+  if [ $c == 0 ]; then
+    x=200
+    y=$((100+100*(m-1)))
+  elif [ $c == 1 ]; then
+    x=600
+    y=$((100+100*m))
+  fi
 
   echo -e '\t\trouter'$i': Router {' >> $ned_file
   echo -e '\t\t\t@display("'p=$((x))','$((y))'");' >> $ned_file

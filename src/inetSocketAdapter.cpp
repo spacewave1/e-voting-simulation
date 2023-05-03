@@ -9,7 +9,7 @@
 
 void inetSocketAdapter::send(std::string payload) {
 
-    sendOutPacket = new inet::Packet("data");
+    send_out_packet = new inet::Packet("data");
 
     auto byteCountData = inet::makeShared<inet::BytesChunk>();
     std::vector<uint8_t> appData{ msg_kind };
@@ -22,23 +22,24 @@ void inetSocketAdapter::send(std::string payload) {
 
     vec.resize(sendBytes);
     for (int i = 0; i < sendBytes; i++)
-        vec[i] = (bytesSent + payload[i % sendBytes]) & 0xFF;
+        vec[i] = (bytes_sent + payload[i % sendBytes]) & 0xFF;
 
     dataChunk->setBytes(vec);
 
-    sendOutPacket->insertAtBack(dataChunk);
-    if(isMultiPackageData) {
+    send_out_packet->insertAtBack(dataChunk);
+    if(is_multi_package_data) {
         const auto exit_sequence_chunk = inet::makeShared<inet::BytesChunk>();
         exit_sequence_chunk->setBytes(exit_sequence);
 
-        sendOutPacket->insertAtBack(exit_sequence_chunk);
-        isMultiPackageData = false;
+        send_out_packet->insertAtBack(exit_sequence_chunk);
+        is_multi_package_data = false;
     }
 
-    sendOutPacket->insertAtFront(byteCountData);
+    send_out_packet->insertAtFront(byteCountData);
 
-    parentComponent->emit(inet::packetSentSignal, sendOutPacket);
-    socket->send(sendOutPacket);
+    parent_component->emit(inet::packetSentSignal, send_out_packet);
+    std::cout << "send: " << send_out_packet->str() << std::endl;
+    socket->send(send_out_packet);
 }
 
 void inetSocketAdapter::listen() {
@@ -83,38 +84,34 @@ void inetSocketAdapter::close() {
     socket->destroy();
 }
 
-bool inetSocketAdapter::isBound() {
-    return false;
-}
-
 void inetSocketAdapter::setSocket(inet::TcpSocket* socket) {
     this->socket = socket;
 }
 
 void inetSocketAdapter::setParentComponent(inet::cComponent *component) {
-    this->parentComponent = component;
+    this->parent_component = component;
 }
 
 void inetSocketAdapter::addProgrammedMessage(socketMessage message) {
     programmed_message_queue.emplace(message);
 }
 
-void inetSocketAdapter::setMsgKind(uint8_t msgKind) {
-    this->msg_kind = msgKind;
+void inetSocketAdapter::setMsgKind(uint8_t msg_kind) {
+    this->msg_kind = msg_kind;
 }
 
 int inetSocketAdapter::getBytesSent() const {
-    return sendOutPacket->getByteLength();
+    return send_out_packet->getByteLength();
 }
 
-void inetSocketAdapter::setupSocket(std::string localAddress, size_t port) {
+void inetSocketAdapter::setupSocket(std::string local_address, size_t port) {
     socket->renewSocket();
-    socket->bind(inet::Ipv4Address(localAddress.c_str()), port);
-    auto* tcpApp = reinterpret_cast<inet::TcpAppBase*>(parentComponent);
+    socket->bind(inet::Ipv4Address(local_address.c_str()), port);
+    auto* tcpApp = reinterpret_cast<inet::TcpAppBase*>(parent_component);
     socket->setCallback(tcpApp);
     socket->setOutputGate(tcpApp->gate("socketOut"));
 }
 
 void inetSocketAdapter::setIsMultiPackageData(bool newValue) {
-    this->isMultiPackageData = newValue;
+    this->is_multi_package_data = newValue;
 }

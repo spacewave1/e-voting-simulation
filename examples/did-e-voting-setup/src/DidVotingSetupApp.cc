@@ -41,7 +41,7 @@ namespace voting {
 
     void DidVotingSetupApp::handleStartOperation(inet::LifecycleOperation *) {
         // Export state at beginning
-        writeStateToFile("connection/", "at_start_" + this->getFullPath().substr(0,19) + ".json");
+        writeStateToFile("connection/", "at_start_" + this->getFullPath() + ".json");
 
         // Schedule events
         double tConnect = par("tConnect").doubleValue();
@@ -304,7 +304,7 @@ namespace voting {
                     connection_service.computeConnectionReply(socket_adapter,storage, local_did);
                     socket_adapter.close();
                     connect_did = did(content_str);
-                    writeStateToFile("connection/","after_data_received_reply_" + getFullPath().substr(0,19) + ".json");
+                    writeStateToFile("connection/","after_data_received_reply_" + getFullPath() + ".json");
                 } else {
                     EV_DEBUG << "not found" << std::endl;
                 }
@@ -328,7 +328,7 @@ namespace voting {
                         // TODO: Connection failure, or ask for authentication
                         socket->send(createDataPacket("reject"));
                     }
-                    writeStateToFile("connection/", "after_data_send_" + getFullPath().substr(0,19) + ".json");
+                    writeStateToFile("connection/", "after_data_send_" + getFullPath() + ".json");
                 } catch(std::exception ex) {
                     EV_DEBUG << "Could not send" << std::endl;
                 }
@@ -360,7 +360,7 @@ namespace voting {
                         scheduleAt(inet::simTime() + forwardRequestDelta, forwardUpSyncMessage);
                     } else {
                         EV_DEBUG << "schedule return" << std::endl;
-                        writeStateToFile("sync/", "end."  + getFullPath().substr(0,19) + ".json");
+                        writeStateToFile("sync/", "end."  + getFullPath() + ".json");
                         returnDownSyncMessage = new inet::cMessage("timer");
                         returnDownSyncMessage->setKind(SELF_MSGKIND_RETURN_SYNC_DOWN);
                         scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
@@ -396,7 +396,7 @@ namespace voting {
                         scheduleAt(inet::simTime() + returnSyncRequestDelta, returnDownSyncMessage);
                     }
                     // Writes all except highest node
-                    writeStateToFile("sync/", "end."  + getFullPath().substr(0,19) + ".json");
+                    writeStateToFile("sync/", "end."  + getFullPath() + ".json");
 
                 } else if(isReceivingMultipackageMessage && !hasReceivedLastPackageFromMultiMessage){
                     message_stream << content_str;

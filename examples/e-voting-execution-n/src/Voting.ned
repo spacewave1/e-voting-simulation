@@ -31,6 +31,18 @@ network Simulation
 		ethHost4: StandardHost {
 			@display("p=400,600");
 		}
+		ethHost5: StandardHost {
+			@display("p=100,500");
+		}
+		ethHost6: StandardHost {
+			@display("p=700,500");
+		}
+		ethHost7: StandardHost {
+			@display("p=600,200");
+		}
+		ethHost8: StandardHost {
+			@display("p=500,600");
+		}
 		router1: Router {
 			@display("p=300,400");
 		}
@@ -48,6 +60,10 @@ network Simulation
 		ethHost2.ethg++ <--> Eth100M <--> router2.ethg++;
 		ethHost3.ethg++ <--> Eth100M <--> router3.ethg++;
 		ethHost4.ethg++ <--> Eth100M <--> router4.ethg++;
+		ethHost5.ethg++ <--> Eth100M <--> router1.ethg++;
+		ethHost6.ethg++ <--> Eth100M <--> router2.ethg++;
+		ethHost7.ethg++ <--> Eth100M <--> router3.ethg++;
+		ethHost8.ethg++ <--> Eth100M <--> router4.ethg++;
 
 		router1.ethg++ <--> Eth100M <--> router2.ethg++;
 		router1.ethg++ <--> Eth100M <--> router3.ethg++;

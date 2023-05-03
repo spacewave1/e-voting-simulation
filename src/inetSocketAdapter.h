@@ -20,26 +20,25 @@ public:
     void bind(std::string protocol, std::string address, size_t port = 0) override;
     void unbind(std::string protocol, std::string address, size_t port = 0) override;
     void close() override;
-    bool isBound() override;
     void setSocket(inet::TcpSocket* socket);
     void listen() override;
     //void socketDataArrived(inet::TcpSocket *socket, inet::Packet *packet, bool urgent) override;
     void setParentComponent(inet::cComponent* component);
     void addProgrammedMessage(socketMessage message);
-    void setMsgKind(uint8_t msgKind);
+    void setMsgKind(uint8_t msg_kind);
     int getBytesSent() const;
-    void setupSocket(std::string localAddress, size_t port) override;
+    void setupSocket(std::string local_address, size_t port) override;
     void setIsMultiPackageData(bool newValue);
 
 private:
-    inet::Packet* sendOutPacket;
+    inet::Packet* send_out_packet;
     inet::TcpSocket* socket;
-    inet::cComponent* parentComponent;
+    inet::cComponent* parent_component;
     std::queue<socketMessage> programmed_message_queue;
     uint8_t msg_kind;
     logger _logger = logger::Instance();
-    long bytesSent = 0;
-    bool isMultiPackageData = false;
+    long bytes_sent = 0;
+    bool is_multi_package_data = false;
     std::vector<u_int8_t> exit_sequence = { '#', '#', '#', '#'};
 
 };

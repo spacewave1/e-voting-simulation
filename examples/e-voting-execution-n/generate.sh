@@ -1,17 +1,17 @@
 # Generate ini file
 file="./run/omnetpp.ini"
-n=4
+n=$n
 nRouters=4
 tCreateElection=0.01
 tPlaceVoteStart=1
-tPlaceVoteDelta=2
+tPlaceVoteDelta=4
 tThreePReceive=0.01
-tConfirmVoteStart=8
-tConfirmVoteDelta=2
-tRequestKeysStart=16
-tRequestKeysDelta=2
-tTallyStart=30
-tTallyDelta=2
+tConfirmVoteStart=35
+tConfirmVoteDelta=4
+tRequestKeysStart=70
+tRequestKeysDelta=4
+tTallyStart=105
+tTallyDelta=4
 
 echo "[Config PcapRecording]" > $file
 echo "network = voting.Simulation" >> $file
@@ -30,7 +30,7 @@ do
     echo "*.ethHost$i.app[0].tCreateElection = ${tCreateElection}s" >> $file
   fi
   echo "*.ethHost$i.app[0].tPlaceVote = $((tPlaceVoteStart+(i-1)*tPlaceVoteDelta))s" >> $file
-  echo "*.ethHost$i.app[0].tConfirmVote = $((tConfirmVoteStart+(i-1)*tConfirmVoteDelta))s" >> $file
+  echo "*.ethHost$i.app[0].tConfirmVoteAt = $((tConfirmVoteStart+(i-1)*tConfirmVoteDelta))s" >> $file
   echo "*.ethHost$i.app[0].tRequestKeys = $((tRequestKeysStart+(i-1)*tRequestKeysDelta))s" >> $file
   echo "*.ethHost$i.app[0].tTallyAt = $((tTallyStart+(i-1)*tTallyDelta))s" >> $file
   echo "" >> $file

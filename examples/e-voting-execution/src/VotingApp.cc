@@ -197,6 +197,7 @@ namespace voting {
             });
         }
         if (msg->getKind() == SELF_MSGKIND_CONFIRM) {
+            EV_DEBUG << "confirm vote" << std::endl;
             election &election = election_box[0];
             tally_service->prepareTally(election,
                                         is_evaluated_votes_map,
@@ -339,7 +340,7 @@ namespace voting {
             distribution_service.sendElection(&publish_socket_adapter, election_box[0], publish_port);
             closePublishMessage = new inet::cMessage();
             closePublishMessage->setKind(SELF_MSGKIND_CLOSE_PUBLISH_SOCKET);
-            scheduleAt(inet::simTime() + 0.1, closePublishMessage);
+            scheduleAt(inet::simTime() + pause_before_close_publish, closePublishMessage);
             isInitializingDirectionDistribution = false;
         }
         if (msg->getKind() == SELF_MSGKIND_CLOSE_SUBSCRIBE_SOCKET) {
@@ -544,7 +545,7 @@ namespace voting {
                         directionSelfMessage->setKind(SELF_MSGKIND_DISTR_INITIAL_DIRECTION_SEND);
 
                         isInitializingDirectionDistribution = false;
-                        scheduleAt(inet::simTime() + 0.1, directionSelfMessage);
+                        scheduleAt(inet::simTime() + pause_before_send_initial_direction, directionSelfMessage);
                     }
                 }
                 break;
@@ -561,7 +562,7 @@ namespace voting {
             case APP_DISTR_PRE_PUBLISH_DIRECTION_RESPONSE: {
                 hopsSelfMessage = new inet::cMessage("timer");
                 hopsSelfMessage->setKind(SELF_MSGKIND_DISTR_HOPS_SEND);
-                scheduleAt(inet::simTime() + 0.1, hopsSelfMessage);
+                scheduleAt(inet::simTime() + pauseBeforeSendHops, hopsSelfMessage);
                 isReceiving = true;
             }
                 break;
@@ -621,7 +622,7 @@ namespace voting {
 
                         directionSelfMessage->addPar(nextDirection);
                         directionSelfMessage->setKind(SELF_MSGKIND_DISTR_DIRECTION_FORWARD);
-                        scheduleAt(inet::simTime() + 0.2, directionSelfMessage);
+                        scheduleAt(inet::simTime() + pause_before_send_direction_forward, directionSelfMessage);
                     }
                 } else if (!address_up.empty() and !address_down.empty()) {
                     directionSelfMessage = new inet::cMessage("timer");

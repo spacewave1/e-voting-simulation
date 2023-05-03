@@ -43,6 +43,11 @@ namespace voting {
         float closeSyncForwardSocketDelta = 0.01f;
         float listenUpDelta = 0.01f;
 
+        bool isReceivingMultipackageMessage;
+        bool hasReceivedLastPackageFromMultiMessage;
+        int saved_package_type;
+        std::stringstream message_stream;
+
         inet::TcpSocket* downSyncSocket = new inet::TcpSocket();
         inet::TcpSocket* upSyncSocket = new inet::TcpSocket();
         inet::TcpSocket* listen_connection_socket = new inet::TcpSocket();

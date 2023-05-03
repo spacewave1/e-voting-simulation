@@ -1,14 +1,14 @@
 # Generate ini file
 file="./run/omnetpp.ini"
-n=8
+n=$n
 nRouters=4
 tConnect=0.02
+tConnectDelta=0.05
 tSend=0.04
 tListenStart=0.01
 tSyncInit=0.05
 tListenDownSync=0.04
-tDelta=0.05
-tSyncDelta=0.005
+tSyncDelta=0.05
 
 echo "[Config PcapRecording]" > $file
 echo "network = voting.Simulation" >> $file
@@ -23,26 +23,26 @@ do
   echo "*.ethHost$i.app[0].active = true" >> $file
   echo "*.ethHost$i.app[0].localAddress = \"10.0.0.$((1+4*(i-1)))\"" >> $file
   echo "*.ethHost$i.app[0].localPort = 5555" >> $file
-  if [[ $i < $n ]]; then
+  if ((i < n)); then
     echo "*.ethHost$i.app[0].connectAddress = \"10.0.0.$((1+4*i))\"" >> $file
     unset connectTime
-    connectTime=$(awk -v i="${i}" -v tConnect="${tConnect}" -v tDelta="${tDelta}" 'BEGIN{print (tConnect+tDelta*(i-1))}')
+    connectTime=$(awk -v i="${i}" -v tConnect="${tConnect}" -v tDelta="${tConnectDelta}" 'BEGIN{print (tConnect+tDelta*(i-1))}')
     echo "*.ethHost$i.app[0].tConnect = ${connectTime}s" >> $file
   fi
   if [[ $i == 1 ]]; then
     unset sendTime
-    sendTime=$(awk -v i="${i}" -v tSend="${tSend}" -v tDelta="${tDelta}" 'BEGIN{print (tSend+tDelta*(i-1))}')
+    sendTime=$(awk -v i="${i}" -v tSend="${tSend}" -v tDelta="${tConnectDelta}" 'BEGIN{print (tSend+tDelta*(i-1))}')
     echo "*.ethHost$i.app[0].tSend = ${sendTime}s" >> $file
     unset syncInitTime
-    syncInitTime=$(awk -v i="${i}" -v n="${n}" -v tSyncInit="${tSyncInit}" -v tDelta="${tDelta}" 'BEGIN{print (tSyncInit+n*0.05+tDelta*(i-1))}')
+    syncInitTime=$(awk -v i="${i}" -v n="${n}" -v tSyncInit="${tSyncInit}" -v tDelta="${tSyncDelta}" 'BEGIN{print (tSyncInit+n*0.05+tDelta*(i-1))}')
     echo "*.ethHost$i.app[0].tSyncInit = ${syncInitTime}s" >> $file
   else
     unset listenDownSyncTime
-    listenDownSyncTime=$(awk -v i="${i}" -v n="${n}" -v tListenDownSync="${tListenDownSync}" -v tDelta="${tDelta}" 'BEGIN{print (tListenDownSync+n*0.05)}')
+    listenDownSyncTime=$(awk -v i="${i}" -v n="${n}" -v tListenDownSync="${tListenDownSync}" -v tDelta="${tSyncDelta}" 'BEGIN{print (tListenDownSync+n*0.05)}')
     echo "*.ethHost$i.app[0].tListenDownSync = ${listenDownSyncTime}s" >> $file
   fi
   unset listenStartTime
-  listenStartTime=$(awk -v i="${i}" -v n="${n}" -v tListenStart="${tListenStart}" -v tDelta="${tDelta}" 'BEGIN{print (tListenStart+tDelta*((i-2+n)%n))}')
+  listenStartTime=$(awk -v i="${i}" -v n="${n}" -v tListenStart="${tListenStart}" -v tDelta="${tConnectDelta}" 'BEGIN{print (tListenStart+tDelta*((i-2+n)%n))}')
   echo "*.ethHost$i.app[0].tListenStart = ${listenStartTime}s" >> $file
   echo "" >> $file
   echo "" >> $file
@@ -115,7 +115,7 @@ echo "" >> $ned_file
 
 echo "network Simulation" >> $ned_file
 echo "{" >> $ned_file
-echo -e '\t@display("bgb=1600,800");' >> $ned_file
+echo -e '\t@display("'bgb=$((n*100+100)),$((n/2*100+100))'");' >> $ned_file
 echo -e '\tsubmodules:' >> $ned_file
 echo -e '\t\tconfigurator: Ipv4NetworkConfigurator {' >> $ned_file
 echo -e '\t\t\t@display("p=80,50");' >> $ned_file
@@ -128,20 +128,14 @@ for (( i=1; i <= n; ++i ))
 do
   x=0
   y=0
-  c=$((i % nRouters))
-  m=$((i / (nRouters + 1)))
-  if [ $c == 1 ]; then
+  c=$((i % 2))
+  m=$((i / 2))
+  if [ $c == 0 ]; then
     x=100
-    y=$((400+100*m))
-  elif [ $c == 2 ]; then
+    y=$((100+100*(m-1)))
+  elif [ $c == 1 ]; then
     x=700
-    y=$((400+100*m))
-  elif [ $c == 3 ]; then
-    x=$((400+200*m))
-    y=200
-  elif [ $c == 0 ]; then
-    x=$((400+100*m))
-    y=600
+    y=$((100+100*m))
   fi
 
   echo -e '\t\tethHost'$i': StandardHost {' >> $ned_file
@@ -153,21 +147,16 @@ done
 for (( i=1; i <= nRouters; ++i ))
 do
   x=0
-    y=0
-    c=$((i % nRouters))
-    if [ $c == 1 ]; then
-      x=300
-      y=400
-    elif [ $c == 2 ]; then
-      x=500
-      y=400
-    elif [ $c == 3 ]; then
-      x=400
-      y=300
-    elif [ $c == 0 ]; then
-      x=400
-      y=500
-    fi
+  y=0
+  c=$((i % 2))
+  m=$((i / 2))
+  if [ $c == 0 ]; then
+    x=200
+    y=$((100+100*(m-1)))
+  elif [ $c == 1 ]; then
+    x=600
+    y=$((100+100*m))
+  fi
 
   echo -e '\t\trouter'$i': Router {' >> $ned_file
   echo -e '\t\t\t@display("'p=$((x))','$((y))'");' >> $ned_file

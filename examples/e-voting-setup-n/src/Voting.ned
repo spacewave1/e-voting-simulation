@@ -11,7 +11,7 @@ import inet.visualizer.integrated.IntegratedMultiVisualizer;
 
 network Simulation
 {
-	@display("bgb=1600,800");
+	@display("bgb=900,500");
 	submodules:
 		configurator: Ipv4NetworkConfigurator {
 			@display("p=80,50");
@@ -20,40 +20,40 @@ network Simulation
 			@display("p=160,50");
 		}
 		ethHost1: StandardHost {
-			@display("p=100,400");
+			@display("p=700,100");
 		}
 		ethHost2: StandardHost {
-			@display("p=700,400");
+			@display("p=100,100");
 		}
 		ethHost3: StandardHost {
-			@display("p=400,200");
+			@display("p=700,200");
 		}
 		ethHost4: StandardHost {
-			@display("p=400,600");
+			@display("p=100,200");
 		}
 		ethHost5: StandardHost {
-			@display("p=100,500");
+			@display("p=700,300");
 		}
 		ethHost6: StandardHost {
-			@display("p=700,500");
+			@display("p=100,300");
 		}
 		ethHost7: StandardHost {
-			@display("p=600,200");
+			@display("p=700,400");
 		}
 		ethHost8: StandardHost {
-			@display("p=500,600");
+			@display("p=100,400");
 		}
 		router1: Router {
-			@display("p=300,400");
+			@display("p=600,100");
 		}
 		router2: Router {
-			@display("p=500,400");
+			@display("p=200,100");
 		}
 		router3: Router {
-			@display("p=400,300");
+			@display("p=600,200");
 		}
 		router4: Router {
-			@display("p=400,500");
+			@display("p=200,200");
 		}
 	connections:
 		ethHost1.ethg++ <--> Eth100M <--> router1.ethg++;

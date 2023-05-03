@@ -94,8 +94,12 @@ namespace voting {
 
         inet::SocketMap socketMap;
 
-        double pauseBeforePublish = 0.0;
-        double pauseBeforeForwardPortsRequest = 0.0;
+        double pauseBeforePublish = 0.1;
+        double pauseBeforeSendHops = 0.0;
+        double pause_before_close_publish = 0.1;
+        double pause_before_send_initial_direction = 0.1;
+        double pauseBeforeForwardPortsRequest = 0.2;
+        double pause_before_send_direction_forward = 0.2;
 
         void handleTimer(inet::cMessage *msg) override;
         void handleCrashOperation(inet::LifecycleOperation *) override;
