@@ -33,11 +33,13 @@ namespace voting {
             local_address = par("localAddress").stringValue();
             EV_DEBUG << local_address << std::endl;
 
+            EV_DEBUG << std::filesystem::current_path() << std::endl;
+
             connection_service.importDidRegistry(storage,
-                                                 "/home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution/run/res/registry/",
+                                                 "res/registry/",
                                                  "end." + this->getFullPath() + ".json");
             connection_service.importDidResources(storage,
-                                                  "/home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution/run/res/resources/",
+                                                  "res/resources/",
                                                   "end." + this->getFullPath() + ".json");
 
             const std::map<std::string, std::string> &map = storage.getDidStorage();
