@@ -147,16 +147,21 @@ done
 for (( i=1; i <= nRouters; ++i ))
 do
   x=0
-  y=0
-  c=$((i % 2))
-  m=$((i / 2))
-  if [ $c == 0 ]; then
-    x=200
-    y=$((100+100*(m-1)))
-  elif [ $c == 1 ]; then
-    x=600
-    y=$((100+100*m))
-  fi
+    y=0
+    c=$((i % nRouters))
+    if [ $c == 1 ]; then
+      x=300
+      y=400
+    elif [ $c == 2 ]; then
+      x=500
+      y=400
+    elif [ $c == 3 ]; then
+      x=400
+      y=300
+    elif [ $c == 0 ]; then
+      x=400
+      y=500
+    fi
 
   echo -e '\t\trouter'$i': Router {' >> $ned_file
   echo -e '\t\t\t@display("'p=$((x))','$((y))'");' >> $ned_file

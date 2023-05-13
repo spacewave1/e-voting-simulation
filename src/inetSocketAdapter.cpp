@@ -36,9 +36,9 @@ void inetSocketAdapter::send(std::string payload) {
     }
 
     send_out_packet->insertAtFront(byteCountData);
+    std::cout << "before send: " << std::to_string(msg_kind) << std::endl;
 
     parent_component->emit(inet::packetSentSignal, send_out_packet);
-    std::cout << "send: " << send_out_packet->str() << std::endl;
     socket->send(send_out_packet);
 }
 
@@ -96,8 +96,9 @@ void inetSocketAdapter::addProgrammedMessage(socketMessage message) {
     programmed_message_queue.emplace(message);
 }
 
-void inetSocketAdapter::setMsgKind(uint8_t msg_kind) {
-    this->msg_kind = msg_kind;
+void inetSocketAdapter::setMsgKind(uint8_t new_msg_kind) {
+    this->msg_kind = new_msg_kind;
+    std::cout << "set msg kind:" << std::to_string(new_msg_kind) << std::endl;
 }
 
 int inetSocketAdapter::getBytesSent() const {

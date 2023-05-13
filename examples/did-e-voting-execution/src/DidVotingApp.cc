@@ -77,7 +77,7 @@ namespace voting {
         // Schedule events
         double tCreateElection = par("tCreateElection").doubleValue();
         double tPlaceVote = par("tPlaceVote").doubleValue();
-        double tReceive3PRequest = par("tThreePReceive").doubleValue();
+        double tReceive3PRequest = par("tPortsReceive").doubleValue();
         double tConfirmVoteAt = par("tConfirmVoteAt").doubleValue();
         double tRequestKeysAt = par("tRequestKeys").doubleValue();
         double tTallyAt = par("tTallyAt").doubleValue();
@@ -408,7 +408,7 @@ namespace voting {
             //publish_socket->setTCPAlgorithmClass("TcpNoCongestionControl");
             printSocketMap();
             std::cout << "now set socket" << std::endl;
-            publish_socket_adapter.setSocket(publish_socket);
+
             publish_socket_adapter.setIsMultiPackageData(true);
             publish_socket_adapter.setMsgKind(APP_DISTR_PUBLISH);
             publish_socket_adapter.setupSocket(local_address, publish_port);

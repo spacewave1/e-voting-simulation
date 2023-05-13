@@ -10,7 +10,7 @@ simple VotingApp like IApp
         bool active = default(true);
         bool isReceivingAtStart = default(false);
         double tPlaceVote @unit(s) = default(-2s);
-        double tThreePReceive @unit(s) = default(1s);
+        double tPortsReceive @unit(s) = default(1s);
         double tCreateElection @unit(s) = default(-1s);
         double tTallyAt @unit(s) = default(-1s);
         double tRequestKeys @unit(s) = default(-1s);

@@ -37,7 +37,7 @@ namespace voting {
         std::map<std::string, std::string> connection_map;
         std::string nodesString;
 
-        float connectionRequestReplyDelta = 0.01f;
+        float connectionRequestReplyDelta = 0.1f;
         float forwardRequestDelta = 0.1f;
         float returnSyncRequestDelta = 0.5f;
         float closeSyncForwardSocketDelta = 0.01f;

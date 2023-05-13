@@ -32,11 +32,19 @@ namespace voting {
         inet::cMessage *tTallyAtMessage;
         inet::cMessage *tConfirmAtMessage;
         inet::cMessage *tRequestKeysAtMessage;
+        inet::cMessage *closeSetupSelfMessage;
         std::vector<inet::cMessage*> tKeyMessages;
         std::vector<omnetpp::cMsgPar*> addressPars;
         bool isReceiving = false;
         bool isInitializingDirectionDistribution = false;
         bool doesConnect = true;
+
+        bool is_receiving_multipackage_message = false;
+        int exit_sequence_count = 0;
+        bool has_received_last_package_from_multi_message = false;
+        uint8_t saved_package_type = 0;
+        uint8_t last_received_package_type = 0;
+        std::stringstream multi_message_stream;
 
         connectionService connection_service;
         distributionService distribution_service;

@@ -149,7 +149,6 @@ namespace voting {
             bytesSent += socket_adapter.getBytesSent();
         }
         if(msg->getKind() == SELF_MSGKIND_RETURN_SYNC_DOWN){
-            EV_DEBUG << "now send down" << std::endl;
             isReturning = true;
             downSyncSocket->renewSocket();
             setupSocket(downSyncSocket, 5557);

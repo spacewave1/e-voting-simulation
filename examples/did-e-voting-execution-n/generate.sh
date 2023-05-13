@@ -1,17 +1,17 @@
 # Generate ini file
 file="./run/omnetpp.ini"
-n=8
+n=16
 nRouters=4
 tCreateElection=0.01
 tPlaceVoteStart=1
-tPlaceVoteDelta=4
-tThreePReceive=0.01
-tConfirmVoteStart=35
-tConfirmVoteDelta=4
-tRequestKeysStart=70
-tRequestKeysDelta=4
-tTallyStart=105
-tTallyDelta=4
+tPlaceVoteDelta=8 # 4 für n = 8 # 8 für n = 16
+tPortsReceive=0.01
+tConfirmVoteStart=tPlaceVoteDelta*n+3
+tConfirmVoteDelta=8
+tRequestKeysStart=tConfirmVoteStart*2
+tRequestKeysDelta=8
+tTallyStart=tConfirmVoteStart*3
+tTallyDelta=8
 
 echo "[Config PcapRecording]" > $file
 echo "network = voting.Simulation" >> $file
@@ -25,7 +25,7 @@ do
   echo "*.ethHost$i.app[0].typename = \"voting.DidVotingApp\"" >> $file
   echo "*.ethHost$i.app[0].active = true" >> $file
   echo "*.ethHost$i.app[0].localAddress = \"10.0.0.$((1+4*(i-1)))\"" >> $file
-  echo "*.ethHost$i.app[0].tThreePReceive = ${tThreePReceive}s" >> $file
+  echo "*.ethHost$i.app[0].tPortsReceive = ${tPortsReceive}s" >> $file
   if [[ $i == 1 ]]; then
     echo "*.ethHost$i.app[0].tCreateElection = ${tCreateElection}s" >> $file
   fi
@@ -40,6 +40,7 @@ done
 echo "# misc settings" >> $file
 echo "**.crcMode = \"computed\"" >> $file
 echo "**.fcsMode = \"computed\"" >> $file
+
 
 for (( i=1; i <= n; ++i ))
 do
@@ -116,20 +117,14 @@ for (( i=1; i <= n; ++i ))
 do
   x=0
   y=0
-  c=$((i % nRouters))
-  m=$((i / (nRouters + 1)))
-  if [ $c == 1 ]; then
+  c=$((i % 2))
+  m=$((i / 2))
+  if [ $c == 0 ]; then
     x=100
-    y=$((400+100*m))
-  elif [ $c == 2 ]; then
+    y=$((100+100*(m-1)))
+  elif [ $c == 1 ]; then
     x=700
-    y=$((400+100*m))
-  elif [ $c == 3 ]; then
-    x=$((400+200*m))
-    y=200
-  elif [ $c == 0 ]; then
-    x=$((400+100*m))
-    y=600
+    y=$((100+100*m))
   fi
 
   echo -e '\t\tethHost'$i': StandardHost {' >> $ned_file

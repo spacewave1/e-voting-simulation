@@ -25,7 +25,7 @@ public:
     //void socketDataArrived(inet::TcpSocket *socket, inet::Packet *packet, bool urgent) override;
     void setParentComponent(inet::cComponent* component);
     void addProgrammedMessage(socketMessage message);
-    void setMsgKind(uint8_t msg_kind);
+    void setMsgKind(uint8_t new_msg_kind);
     int getBytesSent() const;
     void setupSocket(std::string local_address, size_t port) override;
     void setIsMultiPackageData(bool newValue);
