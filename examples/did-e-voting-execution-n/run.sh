@@ -1,3 +1,3 @@
-n=4 /bin/bash /home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution-n/generate.sh
+n=$n /bin/bash /home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution-n/generate.sh
 /bin/bash /home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution-n/importNetwork.sh
 cd /home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution-n/run && /home/wld/.libs/omnetpp-5.6.2/bin/opp_run_dbg -n "/home/wld/workspace/e-voting/simulation/examples/did-e-voting-execution-n/src;/home/wld/workspace/omnet/inet/src;/home/wld/workspace/omnet/inet/examples;/home/wld/workspace/omnet/inet/tutorials;/home/wld/workspace/omnet/inet/showcases" -l /home/wld/workspace/omnet/inet/out/clang-debug/src/libINET_dbg.so -l /home/wld/workspace/e-voting/cmake-build-debug/simulation/examples/did-e-voting-execution-n/libDidVotingSimulationN.so omnetpp.ini

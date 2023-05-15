@@ -1,6 +1,6 @@
 # Generate ini file
 file="./run/omnetpp.ini"
-n=16
+n=$n
 nRouters=4
 tCreateElection=0.01
 tPlaceVoteStart=1

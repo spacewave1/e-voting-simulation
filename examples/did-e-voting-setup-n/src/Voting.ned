@@ -11,7 +11,7 @@ import inet.visualizer.integrated.IntegratedMultiVisualizer;
 
 network Simulation
 {
-	@display("bgb=900,900");
+	@display("bgb=900,500");
 	submodules:
 		configurator: Ipv4NetworkConfigurator {
 			@display("p=80,50");
@@ -43,30 +43,6 @@ network Simulation
 		ethHost8: StandardHost {
 			@display("p=100,400");
 		}
-		ethHost9: StandardHost {
-			@display("p=700,500");
-		}
-		ethHost10: StandardHost {
-			@display("p=100,500");
-		}
-		ethHost11: StandardHost {
-			@display("p=700,600");
-		}
-		ethHost12: StandardHost {
-			@display("p=100,600");
-		}
-		ethHost13: StandardHost {
-			@display("p=700,700");
-		}
-		ethHost14: StandardHost {
-			@display("p=100,700");
-		}
-		ethHost15: StandardHost {
-			@display("p=700,800");
-		}
-		ethHost16: StandardHost {
-			@display("p=100,800");
-		}
 		router1: Router {
 			@display("p=600,100");
 		}
@@ -88,14 +64,6 @@ network Simulation
 		ethHost6.ethg++ <--> Eth100M <--> router2.ethg++;
 		ethHost7.ethg++ <--> Eth100M <--> router3.ethg++;
 		ethHost8.ethg++ <--> Eth100M <--> router4.ethg++;
-		ethHost9.ethg++ <--> Eth100M <--> router1.ethg++;
-		ethHost10.ethg++ <--> Eth100M <--> router2.ethg++;
-		ethHost11.ethg++ <--> Eth100M <--> router3.ethg++;
-		ethHost12.ethg++ <--> Eth100M <--> router4.ethg++;
-		ethHost13.ethg++ <--> Eth100M <--> router1.ethg++;
-		ethHost14.ethg++ <--> Eth100M <--> router2.ethg++;
-		ethHost15.ethg++ <--> Eth100M <--> router3.ethg++;
-		ethHost16.ethg++ <--> Eth100M <--> router4.ethg++;
 
 		router1.ethg++ <--> Eth100M <--> router2.ethg++;
 		router1.ethg++ <--> Eth100M <--> router3.ethg++;
