@@ -36,6 +36,7 @@ namespace voting {
             storage.addResource(local_did, local_address);
 
             socket_adapter.setParentComponent(this);
+            sync_service.setLogAdress(local_address);
         }
     }
 

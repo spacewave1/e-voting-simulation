@@ -11,3 +11,4 @@ examples/did-e-voting-execution/run/results/
 examples/did-e-voting-execution-n/run/results/
 examples/did-e-voting-execution-n/run/res/
 *.csv
+*.png
