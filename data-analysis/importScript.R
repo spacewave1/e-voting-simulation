@@ -9,12 +9,12 @@ library(plyr)
 library(ggplot2)
 library(tidyr)
 
-n=8
+n=4
 
-setupDir = glue("workspace/e-voting/simulation/data-analysis/data/e-vote-setup/n{n}gen")
-voteExecutionDir = glue("workspace/e-voting/simulation/data-analysis/data/e-vote-exe/n{n}gen")
-didSetupDir = glue("workspace/e-voting/simulation/data-analysis/data/did-e-vote-setup/n{n}gen")
-didExeuctionDir = glue("workspace/e-voting/simulation/data-analysis/data/did-e-vote-exe/n{n}gen")
+setupDir = glue("workspace/e-voting/simulation/data-analysis/data/e-vote-setup/n{n}")
+voteExecutionDir = glue("workspace/e-voting/simulation/data-analysis/data/e-vote-exe/n{n}")
+didSetupDir = glue("workspace/e-voting/simulation/data-analysis/data/did-e-vote-setup/n{n}")
+didExeuctionDir = glue("workspace/e-voting/simulation/data-analysis/data/did-e-vote-exe/n{n}")
 
 setupsCSVs = list.files(path=setupDir, pattern="*.csv", full.names=TRUE)
 executionsCSVs = list.files(path=voteExecutionDir, pattern="*.csv", full.names=TRUE)
@@ -82,59 +82,66 @@ for (i in 1:n) {
   did_exec_df$expected_data_pkg_count[i] = didExpectedDataPackets
 }
 
-caption_text = glue("n={n}")
+std = sd(setup_df$data_pkg_count)
 
-std = sd(setup_df$expected_data_pkg_count)
+y_lab_text = "Anzahl empfangener Pakete"
+x_lab_text = "Host Nr."
 
-#setup_output_df <- gather(setup_df, key = type, value = package_count, c("pkg_count", "data_pkg_count", "expected_data_pkg_count"))
-#ggplot(setup_df, aes(x=host, y = pkg_count)) + geom_point()
-#ggplot(setup_df, aes(x=host, y = data_pkg_count)) + geom_point()
-#ggplot(setup_df, aes(x=host, y = expected_data_pkg_count)) + geom_point()
-ggplot() + ylab("Packages Received") + xlab("Host No.") +
+std_string = "\u03C3≈{round(std,2)},"
+n_string = "n={n}"
+
+caption_text = glue(paste(std_string, n_string))
+#caption_text = glue(n_string)
+
+title_text = "Wahlnetzwerkaufbau"
+
+ggplot() + ylab(y_lab_text) + xlab(x_lab_text) +
   geom_ribbon(data=setup_df, mapping = aes(x = host, y= expected_data_pkg_count, ymin = expected_data_pkg_count - sd(expected_data_pkg_count), ymax = expected_data_pkg_count + sd(expected_data_pkg_count)),  fill = "mistyrose") + 
-  geom_point(data = setup_df, aes(x=host, y = pkg_count, col = "sim all")) + 
-  geom_point(data=setup_df, aes(x=host, y = data_pkg_count, col="sim data")) +
+  geom_point(shape = 4, data = setup_df, aes(x=host, y = pkg_count, col = "sim all")) + 
+  geom_point(shape = 4, data=setup_df, aes(x=host, y = data_pkg_count, col="sim data")) +
   geom_line(setup_df, mapping=aes(x=host, y = expected_data_pkg_count, col="model data")) +
-  labs(colour="type",title = "Voting Setup Packages", caption = caption_text)
+  labs(colour="type",title = title_text, caption = caption_text) + theme_bw()
 
-#exec_output_df <- gather(exec_df, key = type, value = package_count, c("pkg_count", "data_pkg_count", "expected_data_pkg_count"))
-#ggplot(exec_df, aes(x=host, y = pkg_count)) + geom_point()
-#ggplot(exec_df, aes(x=host, y = data_pkg_count)) + geom_point()
-#ggplot(exec_df, aes(x=host, y = expected_data_pkg_count)) + geom_point()
-#ggplot(exec_output_df, aes(x=host, y = package_count, group = type, colour = type)) + geom_point()
 
 std = sd(exec_df$expected_data_pkg_count)
 
-ggplot() + ylab("Packages Received") + xlab("Host No.") +
-  geom_ribbon(data=exec_df, mapping = aes(x = host, y= expected_data_pkg_count, ymin = expected_data_pkg_count - sd(expected_data_pkg_count), ymax = expected_data_pkg_count + sd(expected_data_pkg_count)),  fill = "mistyrose") + 
-  geom_point(data = exec_df, aes(x=host, y = pkg_count, col = "sim all")) + 
-  geom_point(data=exec_df, aes(x=host, y = data_pkg_count, col="sim data")) +
-  geom_line(exec_df, mapping=aes(x=host, y = expected_data_pkg_count, col="model data")) +
-  labs(colour="type", title = "Voting Execution Packages", caption = caption_text)
+caption_text = glue(paste(std_string, n_string))
+#caption_text = glue(n_string)
 
-#did_setup_output_df <- gather(did_setup_df, key = type, value = package_count, c("pkg_count", "data_pkg_count", "expected_data_pkg_count"))
-#ggplot(did_setup_df, aes(x=host, y = pkg_count)) + geom_point()
-#ggplot(did_setup_df, aes(x=host, y = data_pkg_count)) + geom_point()
-#ggplot(did_setup_df, aes(x=host, y = expected_data_pkg_count)) + geom_point()
+title_text = "Wahldurchführung"
+
+ggplot() + ylab(y_lab_text) + xlab(x_lab_text) +
+  geom_ribbon(data=exec_df, mapping = aes(x = host, y= expected_data_pkg_count, ymin = expected_data_pkg_count - sd(expected_data_pkg_count), ymax = expected_data_pkg_count + sd(expected_data_pkg_count)),  fill = "mistyrose") + 
+  geom_point(shape = 4, data = exec_df, aes(x=host, y = pkg_count, col = "sim all")) + 
+  geom_point(shape = 4,data=exec_df, aes(x=host, y = data_pkg_count, col="sim data")) +
+  geom_line(exec_df, mapping=aes(x=host, y = expected_data_pkg_count, col="model data")) +
+  labs(colour="type", title = title_text, caption = caption_text) + theme_bw()
 
 std = sd(did_setup_df$expected_data_pkg_count)
 
-ggplot() + ylab("Packages Received") + xlab("Host No.") +
+caption_text = glue(paste(std_string, n_string))
+#caption_text = glue(n_string)
+
+title_text = "DID Wahlnetzwerkaufbau"
+
+ggplot() + ylab(y_lab_text) + xlab(x_lab_text) +
   geom_ribbon(data=did_setup_df, mapping = aes(x = host, y= expected_data_pkg_count, ymin = expected_data_pkg_count - std, ymax = expected_data_pkg_count + std),  fill = "mistyrose") + 
-  geom_point(data = did_setup_df, aes(x=host, y = pkg_count, col = "sim all")) + 
-  geom_point(data=did_setup_df, aes(x=host, y = data_pkg_count, col="sim data")) +
+  geom_point(shape = 4, data = did_setup_df, aes(x=host, y = pkg_count, col = "sim all")) + 
+  geom_point(shape = 4, data=did_setup_df, aes(x=host, y = data_pkg_count, col="sim data")) +
   geom_line(did_setup_df, mapping=aes(x=host, y = expected_data_pkg_count, col="model data")) +
-  labs(colour="Type",title = "Did Setup Packages", caption = caption_text)
+  labs(colour="Type",title = title_text, caption = caption_text) + theme_bw()
 
-#ggplot(did_setup_output_df, aes(x=host, y = package_count, group = type, colour = type)) + geom_point()
-
-#did_exec_output_df <- gather(did_exec_df, key = type, value = package_count, c("pkg_count", "data_pkg_count", "expected_data_pkg_count"))
 std = sd(did_exec_df$expected_data_pkg_count)
 
-ggplot() + ylab("Packages Received") + xlab("Host No.") +
+caption_text = glue(paste(std_string, n_string))
+#caption_text = glue(n_string)
+
+title_text = "DID Wahldurchführung"
+
+ggplot() + ylab(y_lab_text) + xlab(x_lab_text) +
   geom_ribbon(data=did_exec_df, mapping = aes(x = host, y= expected_data_pkg_count, ymin = expected_data_pkg_count - std, ymax = expected_data_pkg_count + std),  fill = "mistyrose") + 
-  geom_point(data = did_exec_df, aes(x=host, y = pkg_count, col = "sim all")) + 
-  geom_point(data=did_exec_df, aes(x=host, y = data_pkg_count, col="sim data")) +
+  geom_point(shape = 4, data = did_exec_df, aes(x=host, y = pkg_count, col = "sim all")) + 
+  geom_point(shape = 4, data=did_exec_df, aes(x=host, y = data_pkg_count, col="sim data")) +
   geom_line(did_exec_df, mapping=aes(x=host, y = expected_data_pkg_count, col="model data")) +
-  labs(colour="type",title = "Did Execution Packages", caption = caption_text)
+  labs(colour="type", title = title_text, caption = caption_text) + theme_bw()
 
